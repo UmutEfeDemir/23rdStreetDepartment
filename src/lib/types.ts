@@ -27,7 +27,7 @@ export type OfficerStatus = "Görevde" | "Aktif" | "İzinli" | "Eğitimde"
 
 export const UNIT_LABELS: Record<Unit, string> = {
   HC: "High Command",
-  Detective: "Detective Division",
+  Detective: "Detective Supervisor",
   HPD: "Karayolu Devriye",
   CID: "Suç Soruşturma",
   SWAT: "Özel Harekat",

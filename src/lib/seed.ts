@@ -30,7 +30,7 @@ export const SEED_OFFICERS: Officer[] = [
   {
     id: "3",
     badgeNo: "#237",
-    name: "Isaac Hancer",
+    name: "Jon Nollane",
     rank: "Senior Lieutenant",
     unit: "HC",
     status: "Görevde",

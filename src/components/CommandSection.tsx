@@ -1,4 +1,5 @@
 import type { Officer } from "@/lib/types"
+import { UNIT_LABELS } from "@/lib/types"
 
 interface Props {
   officers: Officer[]
@@ -134,7 +135,7 @@ export default function CommandSection({ officers }: Props) {
                   color: "var(--color-faint)",
                 }}
               >
-                {officer.unit}
+                {UNIT_LABELS[officer.unit] ?? officer.unit}
               </div>
 
               {/* Status indicator */}

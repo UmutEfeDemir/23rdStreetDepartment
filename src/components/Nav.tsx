@@ -3,6 +3,7 @@
 import { useState, useEffect } from "react"
 import { useSession, signIn, signOut } from "next-auth/react"
 import Link from "next/link"
+import Image from "next/image"
 
 const NAV_LINKS = [
   { href: "#command", label: "Komuta" },
@@ -42,17 +43,15 @@ export default function Nav() {
       >
         {/* Logo */}
         <Link href="#" className="flex items-center gap-3 group">
-          <div
-            className="w-8 h-8 flex items-center justify-center text-xs font-bold btn-clip"
-            style={{
-              background: "var(--color-accent)",
-              color: "var(--color-accent-ink)",
-              fontFamily: "var(--font-mono)",
-              letterSpacing: "0.04em",
-            }}
-          >
-            23
-          </div>
+          <Image
+            src="/logo.png"
+            alt="23rd Street Department"
+            width={44}
+            height={44}
+            className="rounded-full"
+            style={{ objectFit: "cover" }}
+            priority
+          />
           <div>
             <div
               style={{
