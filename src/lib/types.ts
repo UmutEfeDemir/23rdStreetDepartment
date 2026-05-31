@@ -1,4 +1,14 @@
 export type Rank =
+  | "Captain"
+  | "Senior Lieutenant"
+  | "Lieutenant"
+  | "Senior Sergeant"
+  | "Sergeant"
+  | "Senior Officer"
+  | "Officer"
+  | "Probationary Officer"
+  | "Cadet"
+  // Türkçe rütbeler (eski uyumluluk)
   | "Komiser"
   | "Komiser Yardımcısı"
   | "Yardımcı Komiser"
@@ -11,11 +21,13 @@ export type Rank =
   | "Deneme Trooper"
   | "Aday"
 
-export type Unit = "HPD" | "CID" | "SWAT" | "TFD" | "K9" | "ASD"
+export type Unit = "HC" | "Detective" | "HPD" | "CID" | "SWAT" | "TFD" | "K9" | "ASD"
 
 export type OfficerStatus = "Görevde" | "Aktif" | "İzinli" | "Eğitimde"
 
 export const UNIT_LABELS: Record<Unit, string> = {
+  HC: "High Command",
+  Detective: "Detective Division",
   HPD: "Karayolu Devriye",
   CID: "Suç Soruşturma",
   SWAT: "Özel Harekat",
@@ -25,17 +37,15 @@ export const UNIT_LABELS: Record<Unit, string> = {
 }
 
 export const RANK_ORDER: Rank[] = [
-  "Komiser",
-  "Komiser Yardımcısı",
-  "Yardımcı Komiser",
-  "Başmüfettiş",
-  "Müfettiş",
-  "Başçavuş",
-  "Çavuş",
-  "Kıdemli Trooper",
-  "Trooper",
-  "Deneme Trooper",
-  "Aday",
+  "Captain",
+  "Senior Lieutenant",
+  "Lieutenant",
+  "Senior Sergeant",
+  "Sergeant",
+  "Senior Officer",
+  "Officer",
+  "Probationary Officer",
+  "Cadet",
 ]
 
 export interface Officer {
