@@ -1,26 +1,146 @@
 @import "tailwindcss";
 
+@theme {
+  /* Backgrounds */
+  --color-bg: oklch(0.155 0.006 70);
+  --color-bg-2: oklch(0.195 0.007 70);
+  --color-bg-3: oklch(0.245 0.008 70);
+
+  /* Borders */
+  --color-line: oklch(0.34 0.012 75 / 0.55);
+  --color-line-soft: oklch(0.34 0.012 75 / 0.28);
+
+  /* Text */
+  --color-txt: oklch(0.96 0.004 80);
+  --color-muted: oklch(0.70 0.01 80);
+  --color-faint: oklch(0.52 0.01 80);
+
+  /* Accent */
+  --color-accent: #E6B450;
+  --color-accent-ink: oklch(0.20 0.02 80);
+  --color-warn: oklch(0.80 0.135 75);
+  --color-status-on: oklch(0.72 0.16 150);
+
+  /* Fonts */
+  --font-display: var(--font-oswald);
+  --font-body: var(--font-barlow);
+  --font-mono: var(--font-jetbrains);
+}
+
 :root {
-  --background: #ffffff;
-  --foreground: #171717;
+  color-scheme: dark;
 }
 
-@theme inline {
-  --color-background: var(--background);
-  --color-foreground: var(--foreground);
-  --font-sans: var(--font-geist-sans);
-  --font-mono: var(--font-geist-mono);
+* {
+  box-sizing: border-box;
 }
 
-@media (prefers-color-scheme: dark) {
-  :root {
-    --background: #0a0a0a;
-    --foreground: #ededed;
-  }
+html {
+  scroll-behavior: smooth;
 }
 
 body {
-  background: var(--background);
-  color: var(--foreground);
-  font-family: Arial, Helvetica, sans-serif;
+  background-color: var(--color-bg);
+  color: var(--color-txt);
+  font-family: var(--font-body), system-ui, sans-serif;
+  -webkit-font-smoothing: antialiased;
+  -moz-osx-font-smoothing: grayscale;
+  overflow-x: hidden;
 }
+
+/* Grid texture overlay */
+body::before {
+  content: "";
+  position: fixed;
+  inset: 0;
+  background-image:
+    linear-gradient(oklch(0.34 0.012 75 / 0.06) 1px, transparent 1px),
+    linear-gradient(90deg, oklch(0.34 0.012 75 / 0.06) 1px, transparent 1px);
+  background-size: 40px 40px;
+  pointer-events: none;
+  z-index: 0;
+}
+
+/* Scrollbar */
+::-webkit-scrollbar { width: 6px; }
+::-webkit-scrollbar-track { background: var(--color-bg); }
+::-webkit-scrollbar-thumb { background: var(--color-bg-3); border-radius: 3px; }
+::-webkit-scrollbar-thumb:hover { background: var(--color-accent); }
+
+/* Kicker component */
+.kicker {
+  font-family: var(--font-mono), monospace;
+  font-size: 0.7rem;
+  letter-spacing: 0.18em;
+  text-transform: uppercase;
+  color: var(--color-accent);
+  display: flex;
+  align-items: center;
+  gap: 10px;
+}
+.kicker::before {
+  content: "";
+  display: block;
+  width: 26px;
+  height: 1.5px;
+  background: var(--color-accent);
+  flex-shrink: 0;
+}
+
+/* Clip-path button */
+.btn-clip {
+  clip-path: polygon(8px 0%, 100% 0%, calc(100% - 8px) 100%, 0% 100%);
+}
+
+/* Status badge */
+.badge-on  { color: var(--color-status-on); }
+.badge-act { color: var(--color-accent); }
+.badge-off { color: var(--color-faint); }
+
+/* Marquee */
+@keyframes marquee {
+  from { transform: translateX(0); }
+  to   { transform: translateX(-50%); }
+}
+.animate-marquee {
+  animation: marquee 28s linear infinite;
+  will-change: transform;
+}
+
+/* Counter animation */
+@keyframes fadeUp {
+  from { opacity: 0; transform: translateY(16px); }
+  to   { opacity: 1; transform: translateY(0); }
+}
+.animate-fade-up {
+  animation: fadeUp 0.6s ease forwards;
+}
+
+/* Scanline overlay for hero */
+.scanlines::after {
+  content: "";
+  position: absolute;
+  inset: 0;
+  background: repeating-linear-gradient(
+    0deg,
+    transparent,
+    transparent 3px,
+    oklch(0 0 0 / 0.06) 3px,
+    oklch(0 0 0 / 0.06) 4px
+  );
+  pointer-events: none;
+}
+
+/* Section padding */
+.section-pad {
+  padding-block: clamp(72px, 11vh, 140px);
+  padding-inline: clamp(20px, 5vw, 64px);
+}
+
+.container-max {
+  max-width: 1280px;
+  margin-inline: auto;
+}
+
+/* Table */
+.table-row-hover:hover { background: oklch(0.34 0.012 75 / 0.12); }

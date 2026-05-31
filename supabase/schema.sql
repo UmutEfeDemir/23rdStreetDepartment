@@ -1,0 +1,1 @@
+-- Dosya artık kullanılmıyor. Neon schema için neon/schema.sql'e bakın.
