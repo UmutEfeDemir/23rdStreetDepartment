@@ -1,22 +1,22 @@
 import Image from "next/image"
 
 const PHOTOS = [
-  { src: "/gallery/g01.png", span: 2, ratio: "16/9" },
-  { src: "/gallery/g02.png", span: 1, ratio: "4/3" },
-  { src: "/gallery/g03.png", span: 1, ratio: "4/3" },
-  { src: "/gallery/g04.png", span: 1, ratio: "4/3" },
-  { src: "/gallery/g05.png", span: 1, ratio: "4/3" },
-  { src: "/gallery/g06.png", span: 2, ratio: "16/9" },
-  { src: "/gallery/g07.png", span: 1, ratio: "4/3" },
-  { src: "/gallery/g08.png", span: 1, ratio: "4/3" },
-  { src: "/gallery/g09.png", span: 2, ratio: "16/9" },
-  { src: "/gallery/g10.png", span: 1, ratio: "4/3" },
-  { src: "/gallery/g11.png", span: 1, ratio: "4/3" },
-  { src: "/gallery/g12.png", span: 1, ratio: "4/3" },
-  { src: "/gallery/g13.png", span: 1, ratio: "4/3" },
-  { src: "/gallery/g14.png", span: 2, ratio: "16/9" },
-  { src: "/gallery/g15.png", span: 1, ratio: "4/3" },
-  { src: "/gallery/g16.png", span: 1, ratio: "4/3" },
+  { src: "/gallery/g01.png", span: 3 },
+  { src: "/gallery/g02.png", span: 1 },
+  { src: "/gallery/g03.png", span: 1 },
+  { src: "/gallery/g04.png", span: 1 },
+  { src: "/gallery/g05.png", span: 1 },
+  { src: "/gallery/g06.png", span: 2 },
+  { src: "/gallery/g07.png", span: 2 },
+  { src: "/gallery/g08.png", span: 1 },
+  { src: "/gallery/g09.png", span: 1 },
+  { src: "/gallery/g10.png", span: 1 },
+  { src: "/gallery/g11.png", span: 1 },
+  { src: "/gallery/g12.png", span: 3 },
+  { src: "/gallery/g13.png", span: 1 },
+  { src: "/gallery/g14.png", span: 1 },
+  { src: "/gallery/g15.png", span: 1 },
+  { src: "/gallery/g16.png", span: 3 },
 ]
 
 export default function Gallery() {
@@ -44,17 +44,17 @@ export default function Gallery() {
         <div
           style={{
             display: "grid",
-            gridTemplateColumns: "repeat(2, 1fr)",
-            gap: 8,
+            gridTemplateColumns: "repeat(3, 1fr)",
+            gap: 6,
           }}
         >
           {PHOTOS.map((photo, i) => (
             <div
               key={i}
-              className="relative overflow-hidden"
+              className="gallery-item relative"
               style={{
                 gridColumn: `span ${photo.span}`,
-                aspectRatio: photo.ratio,
+                aspectRatio: "16/9",
                 background: "var(--color-bg-3)",
                 border: "1px solid var(--color-line)",
               }}
@@ -63,11 +63,17 @@ export default function Gallery() {
                 src={photo.src}
                 alt={`Saha görüntüsü ${i + 1}`}
                 fill
-                sizes={photo.span === 2 ? "100vw" : "50vw"}
+                sizes={
+                  photo.span === 3
+                    ? "100vw"
+                    : photo.span === 2
+                    ? "66vw"
+                    : "33vw"
+                }
                 style={{ objectFit: "cover" }}
                 quality={85}
               />
-              {/* corner accent */}
+              {/* corner accents */}
               <div
                 className="absolute top-0 left-0 w-4 h-4 z-10 pointer-events-none"
                 style={{

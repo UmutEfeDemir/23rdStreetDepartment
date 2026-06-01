@@ -145,6 +145,31 @@ body::before {
 /* Table */
 .table-row-hover:hover { background: oklch(0.34 0.012 75 / 0.12); }
 
+/* ── Gallery hover zoom ──────────────────────────────── */
+.gallery-item {
+  overflow: hidden;
+  cursor: pointer;
+}
+.gallery-item img {
+  transition: transform 0.45s cubic-bezier(0.25, 0.46, 0.45, 0.94);
+}
+.gallery-item:hover img {
+  transform: scale(1.07);
+}
+.gallery-item::after {
+  content: "";
+  position: absolute;
+  inset: 0;
+  background: linear-gradient(to top, oklch(0 0 0 / 0.45), transparent 55%);
+  opacity: 0;
+  transition: opacity 0.35s ease;
+  pointer-events: none;
+  z-index: 5;
+}
+.gallery-item:hover::after {
+  opacity: 1;
+}
+
 /* ── Intro Animation ─────────────────────────────────── */
 html.intro-lock { overflow: hidden; }
 
