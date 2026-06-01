@@ -15,12 +15,15 @@ export const { handlers, signIn, signOut, auth } = NextAuth({
       if (account?.providerAccountId) {
         token.discordId = account.providerAccountId
       }
+      if (!token.discordId && token.sub) {
+        token.discordId = token.sub
+      }
       return token
     },
     async session({ session, token }) {
       if (session.user) {
         (session.user as { id?: string; discordId?: string }).id = token.sub ?? ""
-        ;(session.user as { id?: string; discordId?: string }).discordId = token.discordId as string
+        ;(session.user as { id?: string; discordId?: string }).discordId = (token.discordId ?? token.sub) as string
       }
       return session
     },

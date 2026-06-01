@@ -132,6 +132,7 @@ export default function PersonnelPanel() {
   const [loading, setLoading] = useState(false)
   const [dutyLoading, setDutyLoading] = useState(false)
   const [requestStatus, setRequestStatus] = useState<"idle" | "sending" | "sent" | "exists">("idle")
+  const [accessStatus, setAccessStatus] = useState<string | null>(null)
 
   const fetchDuty = useCallback(async () => {
     setLoading(true)
@@ -142,6 +143,7 @@ export default function PersonnelPanel() {
       setActiveDuty(data.activeDuty)
       setLogs(data.logs ?? [])
       setLicenses(data.licenses ?? [])
+      setAccessStatus(data.accessStatus ?? null)
     }
     setLoading(false)
   }, [])
@@ -252,9 +254,17 @@ export default function PersonnelPanel() {
                   <div style={{ ...mono, fontSize: "0.6rem", color: "var(--color-faint)", textAlign: "center" }}>
                     Discord hesabınız henüz yetkilendirilmedi.
                   </div>
-                  {requestStatus === "sent" ? (
+                  {accessStatus === "approved" ? (
                     <div style={{ ...mono, fontSize: "0.6rem", color: "var(--color-status-on)", textAlign: "center", padding: "10px", border: "1px solid var(--color-status-on)" }}>
-                      ✓ Talebiniz iletildi. Admin onayını bekleyin.
+                      ✓ Erişiminiz onaylandı. Admin profil bağlantısını tamamlıyor.
+                    </div>
+                  ) : accessStatus === "pending" || requestStatus === "sent" ? (
+                    <div style={{ ...mono, fontSize: "0.6rem", color: "var(--color-accent)", textAlign: "center", padding: "10px", border: "1px solid var(--color-accent)" }}>
+                      ● Talebiniz inceleniyor. Admin onayını bekleyin.
+                    </div>
+                  ) : accessStatus === "rejected" ? (
+                    <div style={{ ...mono, fontSize: "0.6rem", color: "var(--color-warn)", textAlign: "center", padding: "10px", border: "1px solid var(--color-warn)" }}>
+                      Erişim talebiniz reddedildi. Yönetici ile iletişime geçin.
                     </div>
                   ) : requestStatus === "exists" ? (
                     <div style={{ ...mono, fontSize: "0.6rem", color: "var(--color-accent)", textAlign: "center", padding: "10px", border: "1px solid var(--color-line)" }}>
