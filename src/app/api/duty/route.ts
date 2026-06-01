@@ -1,6 +1,25 @@
 import { auth } from "@/auth"
 import { getDb } from "@/lib/db"
 
+async function getDiscordIdAndAccess(): Promise<{ discordId: string; accessStatus: string | null } | null> {
+  const session = await auth()
+  if (!session?.user) return null
+
+  const discordId = (session.user as { discordId?: string }).discordId
+  if (!discordId) return null
+
+  const sql = getDb()
+  let accessStatus: string | null = null
+  try {
+    const accessReq = await sql`SELECT status FROM access_requests WHERE discord_id = ${discordId} LIMIT 1`
+    accessStatus = (accessReq[0] as { status?: string } | undefined)?.status ?? null
+  } catch {
+    // table may not exist yet
+  }
+
+  return { discordId, accessStatus }
+}
+
 export async function GET() {
   const session = await auth()
   if (!session?.user) return Response.json({ error: "Giriş gerekli" }, { status: 401 })
@@ -18,8 +37,13 @@ export async function GET() {
     // table may not exist yet
   }
 
+  // Block access if not approved
+  if (accessStatus !== "approved") {
+    return Response.json({ officer: null, activeDuty: null, logs: [], licenses: [], accessStatus })
+  }
+
   const officers = await sql`SELECT * FROM officers_db WHERE discord_id = ${discordId} LIMIT 1`
-  if (!officers.length) return Response.json({ officer: null, activeDuty: null, logs: [], accessStatus })
+  if (!officers.length) return Response.json({ officer: null, activeDuty: null, logs: [], licenses: [], accessStatus })
 
   const officer = officers[0]
   const activeDuty = await sql`
@@ -39,15 +63,15 @@ export async function GET() {
     WHERE ol.officer_id = ${officer.id}
     ORDER BY COALESCE(bt.category, 'license'), ol.granted_at ASC
   `
-  return Response.json({ officer, activeDuty: activeDuty[0] ?? null, logs, licenses })
+  return Response.json({ officer, activeDuty: activeDuty[0] ?? null, logs, licenses, accessStatus })
 }
 
 export async function POST() {
-  const session = await auth()
-  if (!session?.user) return Response.json({ error: "Giriş gerekli" }, { status: 401 })
+  const auth_data = await getDiscordIdAndAccess()
+  if (!auth_data) return Response.json({ error: "Giriş gerekli" }, { status: 401 })
+  const { discordId, accessStatus } = auth_data
 
-  const discordId = (session.user as { discordId?: string }).discordId
-  if (!discordId) return Response.json({ error: "Discord ID bulunamadı" }, { status: 400 })
+  if (accessStatus !== "approved") return Response.json({ error: "Erişim izniniz yok" }, { status: 403 })
 
   const sql = getDb()
   const officers = await sql`SELECT * FROM officers_db WHERE discord_id = ${discordId} LIMIT 1`
@@ -65,11 +89,11 @@ export async function POST() {
 }
 
 export async function PATCH() {
-  const session = await auth()
-  if (!session?.user) return Response.json({ error: "Giriş gerekli" }, { status: 401 })
+  const auth_data = await getDiscordIdAndAccess()
+  if (!auth_data) return Response.json({ error: "Giriş gerekli" }, { status: 401 })
+  const { discordId, accessStatus } = auth_data
 
-  const discordId = (session.user as { discordId?: string }).discordId
-  if (!discordId) return Response.json({ error: "Discord ID bulunamadı" }, { status: 400 })
+  if (accessStatus !== "approved") return Response.json({ error: "Erişim izniniz yok" }, { status: 403 })
 
   const sql = getDb()
   const officers = await sql`SELECT * FROM officers_db WHERE discord_id = ${discordId} LIMIT 1`
