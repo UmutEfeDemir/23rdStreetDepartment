@@ -1,22 +1,22 @@
 import Image from "next/image"
 
 const PHOTOS = [
-  { src: "/gallery/g01.png", span: 3 },
-  { src: "/gallery/g02.png", span: 1 },
-  { src: "/gallery/g03.png", span: 1 },
-  { src: "/gallery/g04.png", span: 1 },
-  { src: "/gallery/g05.png", span: 1 },
-  { src: "/gallery/g06.png", span: 2 },
-  { src: "/gallery/g07.png", span: 2 },
-  { src: "/gallery/g08.png", span: 1 },
-  { src: "/gallery/g09.png", span: 1 },
-  { src: "/gallery/g10.png", span: 1 },
-  { src: "/gallery/g11.png", span: 1 },
-  { src: "/gallery/g12.png", span: 3 },
-  { src: "/gallery/g13.png", span: 1 },
-  { src: "/gallery/g14.png", span: 1 },
-  { src: "/gallery/g15.png", span: 1 },
-  { src: "/gallery/g16.png", span: 3 },
+  "/gallery/g01.png",
+  "/gallery/g02.png",
+  "/gallery/g03.png",
+  "/gallery/g04.png",
+  "/gallery/g05.png",
+  "/gallery/g06.png",
+  "/gallery/g07.png",
+  "/gallery/g08.png",
+  "/gallery/g09.png",
+  "/gallery/g10.png",
+  "/gallery/g11.png",
+  "/gallery/g12.png",
+  "/gallery/g13.png",
+  "/gallery/g14.png",
+  "/gallery/g15.png",
+  "/gallery/g16.png",
 ]
 
 export default function Gallery() {
@@ -44,45 +44,37 @@ export default function Gallery() {
         <div
           style={{
             display: "grid",
-            gridTemplateColumns: "repeat(3, 1fr)",
+            gridTemplateColumns: "repeat(4, 1fr)",
             gap: 6,
           }}
         >
-          {PHOTOS.map((photo, i) => (
+          {PHOTOS.map((src, i) => (
             <div
               key={i}
               className="gallery-item relative"
               style={{
-                gridColumn: `span ${photo.span}`,
                 aspectRatio: "16/9",
                 background: "var(--color-bg-3)",
                 border: "1px solid var(--color-line)",
               }}
             >
               <Image
-                src={photo.src}
+                src={src}
                 alt={`Saha görüntüsü ${i + 1}`}
                 fill
-                sizes={
-                  photo.span === 3
-                    ? "100vw"
-                    : photo.span === 2
-                    ? "66vw"
-                    : "33vw"
-                }
+                sizes="25vw"
                 style={{ objectFit: "cover" }}
                 quality={85}
               />
-              {/* corner accents */}
               <div
-                className="absolute top-0 left-0 w-4 h-4 z-10 pointer-events-none"
+                className="absolute top-0 left-0 w-3 h-3 z-10 pointer-events-none"
                 style={{
                   borderTop: "1.5px solid var(--color-accent)",
                   borderLeft: "1.5px solid var(--color-accent)",
                 }}
               />
               <div
-                className="absolute bottom-0 right-0 w-4 h-4 z-10 pointer-events-none"
+                className="absolute bottom-0 right-0 w-3 h-3 z-10 pointer-events-none"
                 style={{
                   borderBottom: "1.5px solid var(--color-line)",
                   borderRight: "1.5px solid var(--color-line)",

@@ -1,4 +1,4 @@
-import { SEED_OFFICERS, SEED_STATS, COMMAND_STAFF } from "@/lib/seed"
+import { SEED_STATS, COMMAND_STAFF } from "@/lib/seed"
 import IntroAnimation from "@/components/IntroAnimation"
 import StatusRibbon from "@/components/StatusRibbon"
 import Nav from "@/components/Nav"
@@ -15,9 +15,7 @@ import JoinCTA from "@/components/JoinCTA"
 import Footer from "@/components/Footer"
 
 export default async function Home() {
-  // In production these would come from the DB via API
   const stats = SEED_STATS
-  const officers = SEED_OFFICERS
   const commandStaff = COMMAND_STAFF
 
   return (
@@ -30,7 +28,7 @@ export default async function Home() {
         <Stats stats={stats} />
         <Mission />
         <CommandSection officers={commandStaff} />
-        <PersonnelSection officers={officers} />
+        <PersonnelSection />
         <PersonnelPanel />
         <UnitsSection />
         <Gallery />
