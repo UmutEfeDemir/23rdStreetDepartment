@@ -32,12 +32,21 @@ export async function POST(req: NextRequest) {
 
 export async function PATCH(req: NextRequest) {
   if (!(await isAdmin())) return Response.json({ error: "Yetkisiz" }, { status: 401 })
-  const { id, discord_id, badge_no, name, rank, unit, status, seniority_months, rank_progress, next_rank, is_command } = await req.json()
+  const body = await req.json()
+  const { id, reset_duty_hours } = body
   if (!id) return Response.json({ error: "ID gerekli" }, { status: 400 })
   const sql = getDb()
+
+  if (reset_duty_hours) {
+    const rows = await sql`UPDATE officers_db SET duty_hours = 0 WHERE id = ${id} RETURNING *`
+    return Response.json(rows[0])
+  }
+
+  const { discord_id, discord_avatar, badge_no, name, rank, unit, status, seniority_months, rank_progress, next_rank, is_command } = body
   const rows = await sql`
     UPDATE officers_db SET
       discord_id = ${discord_id || null},
+      discord_avatar = ${discord_avatar || null},
       badge_no = ${badge_no},
       name = ${name},
       rank = ${rank},

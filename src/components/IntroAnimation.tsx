@@ -10,7 +10,6 @@ export default function IntroAnimation() {
   useEffect(() => {
     setMounted(true)
     document.documentElement.classList.add("intro-lock")
-
     const timer = setTimeout(finish, 3300)
     return () => clearTimeout(timer)
   }, [])
@@ -18,6 +17,7 @@ export default function IntroAnimation() {
   function finish() {
     setDone(true)
     document.documentElement.classList.remove("intro-lock")
+    window.scrollTo({ top: 0 })
   }
 
   if (!mounted) return null
@@ -25,7 +25,6 @@ export default function IntroAnimation() {
   return (
     <div
       role="presentation"
-      onClick={finish}
       style={{
         position: "fixed",
         inset: 0,
@@ -110,24 +109,34 @@ export default function IntroAnimation() {
           <b style={{ color: "oklch(0.80 0.13 82)", fontWeight: 500 }}>//</b>
           &nbsp; Komuta merkezi bağlanıyor…
         </div>
-      </div>
 
-      {/* Skip */}
-      <div
-        className="intro-skip-btn"
-        style={{
-          position: "absolute",
-          right: "clamp(18px, 4vw, 40px)",
-          bottom: 24,
-          fontFamily: "var(--font-mono)",
-          fontSize: 10,
-          letterSpacing: "0.26em",
-          textTransform: "uppercase",
-          color: "oklch(0.56 0.008 80)",
-          cursor: "pointer",
-        }}
-      >
-        Atlamak için tıkla →
+        {/* Skip button — center below status text */}
+        <button
+          onClick={finish}
+          style={{
+            marginTop: 28,
+            fontFamily: "var(--font-mono)",
+            fontSize: 11,
+            letterSpacing: "0.22em",
+            textTransform: "uppercase",
+            color: "oklch(0.85 0.10 82)",
+            background: "transparent",
+            border: "1px solid oklch(0.40 0.010 75)",
+            padding: "10px 32px",
+            cursor: "pointer",
+            transition: "all 0.2s",
+          }}
+          onMouseEnter={(e) => {
+            (e.currentTarget as HTMLButtonElement).style.borderColor = "oklch(0.72 0.16 82)"
+            ;(e.currentTarget as HTMLButtonElement).style.color = "oklch(0.90 0.16 82)"
+          }}
+          onMouseLeave={(e) => {
+            (e.currentTarget as HTMLButtonElement).style.borderColor = "oklch(0.40 0.010 75)"
+            ;(e.currentTarget as HTMLButtonElement).style.color = "oklch(0.85 0.10 82)"
+          }}
+        >
+          Atla →
+        </button>
       </div>
     </div>
   )

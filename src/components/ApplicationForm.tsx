@@ -1,6 +1,6 @@
 "use client"
 
-import { useState } from "react"
+import { useState, useEffect } from "react"
 import { useSession } from "next-auth/react"
 import { useForm } from "react-hook-form"
 import { zodResolver } from "@hookform/resolvers/zod"
@@ -9,6 +9,7 @@ const schema = z.object({
   fullName: z.string().min(3, "En az 3 karakter"),
   age: z.number().min(18, "18 yaşından küçükler başvuramaz").max(80, "Geçersiz yaş"),
   discord: z.string().min(2, "Discord adı gerekli"),
+  discordId: z.string().regex(/^\d{17,20}$/, "Discord ID 17-20 haneli sayı olmalıdır"),
   characterName: z.string().min(3, "Karakter adı gerekli"),
   characterAge: z.number().min(18, "Karakter yaşı en az 18 olmalıdır").max(100, "Geçersiz karakter yaşı"),
   experience: z.string().min(20, "En az 20 karakter"),
@@ -31,6 +32,14 @@ export default function ApplicationForm() {
   const [submitted, setSubmitted] = useState(false)
   const [error, setError] = useState<string | null>(null)
   const [loading, setLoading] = useState(false)
+  const [rules, setRules] = useState<string | null>(null)
+
+  useEffect(() => {
+    fetch("/api/rules")
+      .then((r) => r.ok ? r.json() : null)
+      .then((d) => { if (d?.content) setRules(d.content) })
+      .catch(() => {})
+  }, [])
 
   const {
     register,
@@ -73,7 +82,7 @@ export default function ApplicationForm() {
   }
 
   const STEP_FIELDS: Record<number, (keyof FormData)[]> = {
-    0: ["fullName", "age", "discord"],
+    0: ["fullName", "age", "discord", "discordId"],
     1: ["characterName", "characterAge"],
     2: ["experience", "motivation"],
     3: ["acceptedRules"],
@@ -234,6 +243,14 @@ export default function ApplicationForm() {
                 {/* Step 0 */}
                 {step === 0 && (
                   <div className="flex flex-col gap-5">
+                    <div style={{ padding: "8px 12px", border: "1px solid #ef4444", background: "oklch(0.18 0.06 30 / 0.3)" }}>
+                      <span style={{ fontFamily: "var(--font-mono)", fontSize: "0.6rem", letterSpacing: "0.14em", textTransform: "uppercase", color: "#ef4444", fontWeight: 700 }}>
+                        ⚠ OOC Bilgilerini Yazınız
+                      </span>
+                      <span style={{ fontFamily: "var(--font-mono)", fontSize: "0.58rem", color: "oklch(0.65 0.04 30)", letterSpacing: "0.08em", marginLeft: 8 }}>
+                        — Gerçek bilgilerinizi girin, karakter bilgisi değil
+                      </span>
+                    </div>
                     <div>
                       <label style={labelStyle}>Ad Soyad</label>
                       <input {...register("fullName")} style={fieldStyle} placeholder="John Doe" />
@@ -252,8 +269,16 @@ export default function ApplicationForm() {
                     </div>
                     <div>
                       <label style={labelStyle}>Discord Adı</label>
-                      <input {...register("discord")} style={fieldStyle} placeholder="username#0000" />
+                      <input {...register("discord")} style={fieldStyle} placeholder="username" />
                       {errors.discord && <p style={errorStyle}>{errors.discord.message}</p>}
+                    </div>
+                    <div>
+                      <label style={labelStyle}>Discord ID</label>
+                      <input {...register("discordId")} style={fieldStyle} placeholder="123456789012345678" />
+                      <p style={{ ...errorStyle, color: "var(--color-faint)", marginTop: 4 }}>
+                        Ayarlar → Gelişmiş → Geliştirici Modu açıp adına sağ tıkla → ID Kopyala
+                      </p>
+                      {errors.discordId && <p style={errorStyle}>{errors.discordId.message}</p>}
                     </div>
                   </div>
                 )}
@@ -324,13 +349,9 @@ export default function ApplicationForm() {
                       <strong style={{ color: "var(--color-accent)", fontFamily: "var(--font-mono)", fontSize: "0.65rem", letterSpacing: "0.14em", textTransform: "uppercase" }}>
                         Teşkilat Kuralları
                       </strong>
-                      <ul className="mt-3 list-disc list-inside flex flex-col gap-1.5">
-                        <li>Tüm oyun içi talimatlara uyulması zorunludur.</li>
-                        <li>Saygısızlık ve kuraldışı davranış tolere edilmez.</li>
-                        <li>Üniforma ve ekipman yönetmeliğine uyulacaktır.</li>
-                        <li>Gizlilik anlaşması imzalanacaktır.</li>
-                        <li>Deneme sürecinde görev başarısı değerlendirilir.</li>
-                      </ul>
+                      <div className="mt-3 flex flex-col gap-1.5" style={{ whiteSpace: "pre-line" }}>
+                        {(rules ?? "• Tüm oyun içi talimatlara uyulması zorunludur.\n• Saygısızlık ve kuraldışı davranış tolere edilmez.\n• Üniforma ve ekipman yönetmeliğine uyulacaktır.\n• Gizlilik anlaşması imzalanacaktır.\n• Deneme sürecinde görev başarısı değerlendirilir.")}
+                      </div>
                     </div>
 
                     <label className="flex items-start gap-3 cursor-pointer">

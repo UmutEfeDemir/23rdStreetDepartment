@@ -7,7 +7,7 @@ import Image from "next/image"
 import Link from "next/link"
 
 type AppStatus = "pending" | "interview" | "accepted" | "rejected"
-type Tab = "applications" | "officers" | "access" | "badges"
+type Tab = "applications" | "officers" | "access" | "badges" | "announcements" | "rules"
 
 interface AccessRequest {
   id: string
@@ -23,17 +23,21 @@ interface Application {
   full_name: string
   age: number
   discord: string
+  discord_id: string
   character_name: string
   unit: string
   experience: string
   motivation: string
   status: AppStatus
   created_at: string
+  rejection_reason: string | null
+  rejected_by: string | null
 }
 
 interface OfficerRow {
   id: string
   discord_id: string | null
+  discord_avatar: string | null
   badge_no: string
   name: string
   rank: string
@@ -149,11 +153,27 @@ export default function AdminDashboard() {
   const [linkError, setLinkError] = useState<string>("")
   const [linkIsApproval, setLinkIsApproval] = useState(false)
 
+  const [rejModal, setRejModal] = useState<Application | null>(null)
+  const [rejReason, setRejReason] = useState("")
+  const [rejBy, setRejBy] = useState("")
+  const [rejSaving, setRejSaving] = useState(false)
+
   const [badgeTypes, setBadgeTypes] = useState<BadgeType[]>([])
   const [newBadgeName, setNewBadgeName] = useState("")
   const [newBadgeCategory, setNewBadgeCategory] = useState("unit")
   const [newBadgePreset, setNewBadgePreset] = useState(0)
   const [badgeSaving, setBadgeSaving] = useState(false)
+
+  interface Announcement { id: number; message: string; type: string; created_at: string }
+  const [announcements, setAnnouncements] = useState<Announcement[]>([])
+  const [newAnnMsg, setNewAnnMsg] = useState("")
+  const [newAnnType, setNewAnnType] = useState<"normal" | "alert">("normal")
+  const [annSaving, setAnnSaving] = useState(false)
+
+  const [rulesContent, setRulesContent] = useState("")
+  const [rulesLoaded, setRulesLoaded] = useState(false)
+  const [rulesSaving, setRulesSaving] = useState(false)
+  const [rulesSaved, setRulesSaved] = useState(false)
 
   const router = useRouter()
 
@@ -174,12 +194,37 @@ export default function AdminDashboard() {
       .then((r) => r.json())
       .then((d) => { setBadgeTypes(Array.isArray(d) ? d : []) })
       .catch(() => {})
+    fetch("/api/announcements")
+      .then((r) => r.json())
+      .then((d) => { setAnnouncements(Array.isArray(d) ? d : []) })
+      .catch(() => {})
+    fetch("/api/rules")
+      .then((r) => r.json())
+      .then((d) => { if (d?.content) { setRulesContent(d.content); setRulesLoaded(true) } })
+      .catch(() => {})
   }, [])
 
   const updateStatus = async (id: string, status: AppStatus) => {
     await fetch("/api/admin/applications", { method: "PATCH", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ id, status }) })
     setApps((p) => p.map((a) => a.id === id ? { ...a, status } : a))
     if (selected?.id === id) setSelected((s) => s ? { ...s, status } : s)
+  }
+
+  const confirmReject = async () => {
+    if (!rejModal) return
+    setRejSaving(true)
+    await fetch("/api/admin/applications", { method: "PATCH", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ id: rejModal.id, status: "rejected", rejection_reason: rejReason, rejected_by: rejBy }) })
+    setApps((p) => p.map((a) => a.id === rejModal.id ? { ...a, status: "rejected" as AppStatus, rejection_reason: rejReason, rejected_by: rejBy } : a))
+    if (selected?.id === rejModal.id) setSelected((s) => s ? { ...s, status: "rejected" as AppStatus, rejection_reason: rejReason, rejected_by: rejBy } : s)
+    setRejModal(null); setRejReason(""); setRejBy("")
+    setRejSaving(false)
+  }
+
+  const deleteApplication = async (id: string) => {
+    if (!confirm("Bu başvuruyu kalıcı olarak silmek istediğinizden emin misiniz?")) return
+    await fetch("/api/admin/applications", { method: "DELETE", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ id }) })
+    setApps((p) => p.filter((a) => a.id !== id))
+    if (selected?.id === id) setSelected(null)
   }
 
   const logout = async () => {
@@ -260,6 +305,38 @@ export default function AdminDashboard() {
     setBadgeTypes(p => p.filter(b => b.id !== id))
   }
 
+  const addAnnouncement = async (e: React.FormEvent) => {
+    e.preventDefault()
+    if (!newAnnMsg.trim()) return
+    setAnnSaving(true)
+    const res = await fetch("/api/announcements", { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ message: newAnnMsg.trim(), type: newAnnType }) })
+    if (res.ok) { const created = await res.json(); setAnnouncements(p => [created, ...p]); setNewAnnMsg("") }
+    setAnnSaving(false)
+  }
+
+  const deleteAnnouncement = async (id: number) => {
+    await fetch("/api/announcements", { method: "DELETE", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ id }) })
+    setAnnouncements(p => p.filter(a => a.id !== id))
+  }
+
+  const saveRules = async (e: React.FormEvent) => {
+    e.preventDefault()
+    setRulesSaving(true)
+    setRulesSaved(false)
+    const res = await fetch("/api/rules", { method: "PATCH", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ content: rulesContent }) })
+    if (res.ok) { setRulesSaved(true); setTimeout(() => window.location.reload(), 800) }
+    setRulesSaving(false)
+  }
+
+  const resetDutyHours = async (officerId: string, officerName: string) => {
+    if (!confirm(`${officerName} için toplam devriye saatini sıfırlamak istediğinizden emin misiniz?`)) return
+    const res = await fetch("/api/officers", { method: "PATCH", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ id: officerId, reset_duty_hours: true }) })
+    if (res.ok) {
+      const updated = await res.json()
+      setOfficers(p => p.map(o => o.id === updated.id ? updated : o))
+    }
+  }
+
   const isLinked = (discordId: string) => officers.some((o) => o.discord_id === discordId)
 
   const openLinkModal = (r: AccessRequest, isApproval: boolean) => {
@@ -303,6 +380,7 @@ export default function AdminDashboard() {
       body: JSON.stringify({
         id: officer.id,
         discord_id: linkingRequest.discord_id,
+        discord_avatar: linkingRequest.discord_avatar || null,
         badge_no: officer.badge_no,
         name: officer.name,
         rank: officer.rank,
@@ -329,6 +407,34 @@ export default function AdminDashboard() {
 
   return (
     <div style={{ minHeight: "100vh", background: "var(--color-bg)" }}>
+
+      {/* Rejection Modal */}
+      {rejModal && (
+        <div style={{ position: "fixed", inset: 0, background: "oklch(0 0 0 / 0.75)", zIndex: 400, display: "flex", alignItems: "center", justifyContent: "center", padding: 24 }}>
+          <div style={{ background: "var(--color-bg-2)", border: "1px solid var(--color-warn)", width: "100%", maxWidth: 480 }}>
+            <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", padding: "16px 24px", borderBottom: "1px solid var(--color-line)", background: "var(--color-bg-3)" }}>
+              <span style={{ ...mono, fontSize: "0.62rem", color: "var(--color-warn)" }}>● Başvuruyu Reddet — {rejModal.full_name}</span>
+              <button onClick={() => { setRejModal(null); setRejReason(""); setRejBy("") }} style={{ ...mono, fontSize: "0.58rem", color: "var(--color-faint)", border: "1px solid var(--color-line)", padding: "4px 10px", background: "transparent", cursor: "pointer" }}>✕</button>
+            </div>
+            <div style={{ padding: "20px 24px", display: "flex", flexDirection: "column", gap: 14 }}>
+              <label style={{ display: "flex", flexDirection: "column", gap: 6 }}>
+                <span style={{ ...mono, fontSize: "0.55rem", color: "var(--color-faint)" }}>Red Sebebi</span>
+                <textarea value={rejReason} onChange={(e) => setRejReason(e.target.value)} rows={3} placeholder="Neden reddedildiğini açıklayın..." style={{ background: "var(--color-bg)", border: "1px solid var(--color-line)", color: "var(--color-txt)", padding: "8px 12px", fontFamily: "var(--font-mono)", fontSize: "0.72rem", outline: "none", resize: "vertical", width: "100%" }} />
+              </label>
+              <label style={{ display: "flex", flexDirection: "column", gap: 6 }}>
+                <span style={{ ...mono, fontSize: "0.55rem", color: "var(--color-faint)" }}>Reddeden (İsim veya Rütbe)</span>
+                <input value={rejBy} onChange={(e) => setRejBy(e.target.value)} placeholder="örn. Captain Richye Smoke" style={{ background: "var(--color-bg)", border: "1px solid var(--color-line)", color: "var(--color-txt)", padding: "8px 12px", fontFamily: "var(--font-mono)", fontSize: "0.72rem", outline: "none", width: "100%" }} />
+              </label>
+              <div style={{ display: "flex", gap: 10, marginTop: 4 }}>
+                <button onClick={confirmReject} disabled={rejSaving || !rejReason.trim()} style={{ ...mono, fontSize: "0.62rem", padding: "10px 22px", background: rejReason.trim() && !rejSaving ? "var(--color-warn)" : "var(--color-bg-3)", color: rejReason.trim() && !rejSaving ? "#fff" : "var(--color-faint)", border: "none", cursor: rejReason.trim() ? "pointer" : "not-allowed", fontWeight: 700, flex: 1 }}>
+                  {rejSaving ? "İşleniyor…" : "Onayla ve Reddet"}
+                </button>
+                <button onClick={() => { setRejModal(null); setRejReason(""); setRejBy("") }} style={{ ...mono, fontSize: "0.62rem", padding: "10px 18px", background: "transparent", color: "var(--color-faint)", border: "1px solid var(--color-line)", cursor: "pointer" }}>İptal</button>
+              </div>
+            </div>
+          </div>
+        </div>
+      )}
 
       {/* Link to Officer Modal */}
       {linkingRequest && (() => {
@@ -496,10 +602,11 @@ export default function AdminDashboard() {
                 )}
               </div>
 
-              <div className="flex gap-3 mt-6">
+              <div className="flex gap-3 mt-6 flex-wrap">
                 <button type="submit" disabled={saving} style={{ ...mono, fontSize: "0.65rem", padding: "10px 24px", background: "var(--color-accent)", color: "var(--color-accent-ink)", border: "none", cursor: "pointer", fontWeight: 700 }}>
                   {saving ? "Kaydediliyor…" : "Kaydet"}
                 </button>
+                <button type="button" onClick={() => resetDutyHours(editTarget.id, editTarget.name)} style={{ ...mono, fontSize: "0.65rem", padding: "10px 24px", background: "transparent", color: "oklch(0.72 0.16 230)", border: "1px solid oklch(0.72 0.16 230)", cursor: "pointer" }}>⟲ Devriye Saatini Sıfırla</button>
                 <button type="button" onClick={() => deleteOfficer(editTarget.id)} style={{ ...mono, fontSize: "0.65rem", padding: "10px 24px", background: "transparent", color: "var(--color-warn)", border: "1px solid var(--color-warn)", cursor: "pointer" }}>Memuru Sil</button>
               </div>
             </form>
@@ -551,9 +658,9 @@ export default function AdminDashboard() {
 
       {/* Tabs */}
       <div style={{ background: "var(--color-bg-2)", borderBottom: "1px solid var(--color-line)", padding: "0 clamp(20px,4vw,48px)", display: "flex", gap: 4 }}>
-        {(["applications", "officers", "access", "badges"] as Tab[]).map((t) => (
+        {(["applications", "officers", "access", "badges", "announcements", "rules"] as Tab[]).map((t) => (
           <button key={t} onClick={() => setTab(t)} style={{ ...mono, fontSize: "0.62rem", padding: "14px 20px", background: "transparent", border: "none", borderBottom: tab === t ? "2px solid var(--color-accent)" : "2px solid transparent", color: tab === t ? "var(--color-accent)" : "var(--color-faint)", cursor: "pointer" }}>
-            {t === "applications" ? `Başvurular (${apps.length})` : t === "officers" ? `Personel (${officers.length})` : t === "access" ? `Erişim (${accessRequests.filter(r => r.status === "pending").length})` : `Rozetler (${badgeTypes.length})`}
+            {t === "applications" ? `Başvurular (${apps.length})` : t === "officers" ? `Personel (${officers.length})` : t === "access" ? `Erişim (${accessRequests.filter(r => r.status === "pending").length})` : t === "badges" ? `Rozetler (${badgeTypes.length})` : t === "announcements" ? `Duyurular (${announcements.length})` : `Kurallar`}
           </button>
         ))}
       </div>
@@ -593,7 +700,7 @@ export default function AdminDashboard() {
               <div style={{ fontFamily: "var(--font-display)", fontSize: "1.4rem", fontWeight: 700, textTransform: "uppercase", color: "var(--color-txt)", marginBottom: 4 }}>{selected.full_name}</div>
               <div style={{ ...mono, fontSize: "0.62rem", color: "var(--color-accent)", marginBottom: 20 }}>{selected.character_name} · Karakter Yaşı: {selected.unit} · {selected.age} yaş</div>
               <div className="grid grid-cols-2 gap-3 mb-6">
-                {[{ label: "Discord", value: selected.discord }, { label: "Karakter Yaşı", value: selected.unit }, { label: "Oyuncu Yaşı", value: String(selected.age) }, { label: "Başvuru Tarihi", value: new Date(selected.created_at).toLocaleDateString("tr-TR") }].map((item) => (
+                {[{ label: "Discord", value: selected.discord }, { label: "Discord ID", value: selected.discord_id || "—" }, { label: "Karakter Yaşı", value: selected.unit }, { label: "Oyuncu Yaşı", value: String(selected.age) }, { label: "Başvuru Tarihi", value: new Date(selected.created_at).toLocaleDateString("tr-TR") }].map((item) => (
                   <div key={item.label} style={{ background: "var(--color-bg-2)", border: "1px solid var(--color-line)", padding: "10px 14px" }}>
                     <div style={{ ...mono, fontSize: "0.55rem", color: "var(--color-faint)", marginBottom: 4 }}>{item.label}</div>
                     <div style={{ fontFamily: "var(--font-body)", fontSize: "0.9rem", color: "var(--color-txt)" }}>{item.value}</div>
@@ -609,11 +716,21 @@ export default function AdminDashboard() {
               <div>
                 <div style={{ ...mono, fontSize: "0.58rem", color: "var(--color-faint)", marginBottom: 10 }}>Durum Güncelle</div>
                 <div className="flex flex-wrap gap-2">
-                  {(["pending", "interview", "accepted", "rejected"] as AppStatus[]).map((s) => (
+                  {(["pending", "interview"] as AppStatus[]).map((s) => (
                     <button key={s} onClick={() => updateStatus(selected.id, s)} style={{ ...mono, fontSize: "0.62rem", padding: "9px 18px", border: `1px solid ${STATUS_COLORS[s]}`, background: selected.status === s ? STATUS_COLORS[s] : "transparent", color: selected.status === s ? "#fff" : STATUS_COLORS[s], cursor: "pointer", fontWeight: selected.status === s ? 700 : 400 }}>{STATUS_LABELS[s]}</button>
                   ))}
+                  <button onClick={() => setRejModal(selected)} style={{ ...mono, fontSize: "0.62rem", padding: "9px 18px", border: "1px solid #ef4444", background: selected.status === "rejected" ? "#ef4444" : "transparent", color: selected.status === "rejected" ? "#fff" : "#ef4444", cursor: "pointer", fontWeight: selected.status === "rejected" ? 700 : 400 }}>Red</button>
+                  <button onClick={() => deleteApplication(selected.id)} style={{ ...mono, fontSize: "0.62rem", padding: "9px 18px", border: "1px solid var(--color-line)", background: "transparent", color: "var(--color-faint)", cursor: "pointer" }}>Sil</button>
                 </div>
               </div>
+
+              {selected.status === "rejected" && (selected.rejection_reason || selected.rejected_by) && (
+                <div style={{ background: "oklch(0.18 0.06 30 / 0.4)", border: "1px solid #ef4444", padding: "12px 16px", marginTop: 8 }}>
+                  <div style={{ ...mono, fontSize: "0.55rem", color: "#ef4444", marginBottom: 6 }}>Red Bilgisi</div>
+                  {selected.rejection_reason && <div style={{ fontFamily: "var(--font-body)", fontSize: "0.88rem", color: "var(--color-muted)", marginBottom: 4 }}><strong style={{ color: "var(--color-faint)", fontFamily: "var(--font-mono)", fontSize: "0.55rem" }}>SEBEP: </strong>{selected.rejection_reason}</div>}
+                  {selected.rejected_by && <div style={{ ...mono, fontSize: "0.6rem", color: "var(--color-faint)" }}>Reddeden: {selected.rejected_by}</div>}
+                </div>
+              )}
             </div>
           )}
         </div>
@@ -651,9 +768,14 @@ export default function AdminDashboard() {
                   {/* Discord avatar */}
                   <div>
                     {o.discord_id ? (
-                      <div className="rounded-full flex items-center justify-center" style={{ width: 32, height: 32, background: "#5865F2", ...mono, fontSize: "0.55rem", color: "#fff" }}>
-                        DC
-                      </div>
+                      o.discord_avatar ? (
+                        // eslint-disable-next-line @next/next/no-img-element
+                        <img src={o.discord_avatar} alt="" className="rounded-full" style={{ width: 32, height: 32, border: "2px solid #5865F2" }} title={o.discord_id} />
+                      ) : (
+                        <div className="rounded-full flex items-center justify-center" style={{ width: 32, height: 32, background: "#5865F2", ...mono, fontSize: "0.55rem", color: "#fff" }} title={o.discord_id}>
+                          DC
+                        </div>
+                      )
                     ) : (
                       <div className="rounded-full flex items-center justify-center" style={{ width: 32, height: 32, background: "var(--color-bg-3)", border: "1px solid var(--color-line)", ...mono, fontSize: "0.55rem", color: "var(--color-faint)" }}>
                         —
@@ -670,6 +792,113 @@ export default function AdminDashboard() {
                   <span style={{ ...mono, fontSize: "0.58rem", color: "var(--color-muted)" }}>{o.unit}</span>
                   <span style={{ ...mono, fontSize: "0.6rem", color: o.status === "Görevde" ? "var(--color-status-on)" : "var(--color-muted)" }}>{o.status}</span>
                   <button onClick={() => openEdit(o)} style={{ ...mono, fontSize: "0.55rem", padding: "5px 10px", border: "1px solid var(--color-accent)", color: "var(--color-accent)", background: "transparent", cursor: "pointer" }}>Düzenle</button>
+                </div>
+              ))}
+            </div>
+          )}
+        </div>
+      )}
+
+      {/* ── Rules tab ── */}
+      {tab === "rules" && (
+        <div style={{ padding: "24px clamp(20px,4vw,48px)", maxWidth: 860 }}>
+          <div style={{ background: "var(--color-bg-2)", border: "1px solid var(--color-line)", padding: 24 }}>
+            <div style={{ ...mono, fontSize: "0.65rem", color: "var(--color-accent)", marginBottom: 8 }}>Teşkilat Kuralları</div>
+            <div style={{ ...mono, fontSize: "0.55rem", color: "var(--color-faint)", marginBottom: 20 }}>
+              Her satır bir kural. Başvuru formunun son adımında otomatik olarak gösterilir. Kayıt sonrası sayfa yenilenir.
+            </div>
+            <form onSubmit={saveRules}>
+              <textarea
+                value={rulesLoaded ? rulesContent : "Yükleniyor…"}
+                onChange={(e) => setRulesContent(e.target.value)}
+                disabled={!rulesLoaded}
+                rows={14}
+                style={{ width: "100%", background: "var(--color-bg)", border: "1px solid var(--color-line)", color: "var(--color-txt)", padding: "12px 16px", fontFamily: "var(--font-mono)", fontSize: "0.75rem", outline: "none", resize: "vertical", lineHeight: 1.8 }}
+                placeholder="• Kural 1&#10;• Kural 2&#10;• Kural 3"
+              />
+              <div className="flex items-center gap-4 mt-4">
+                <button
+                  type="submit"
+                  disabled={rulesSaving || !rulesLoaded}
+                  style={{ ...mono, fontSize: "0.65rem", padding: "10px 24px", background: rulesLoaded && !rulesSaving ? "var(--color-accent)" : "var(--color-bg-3)", color: rulesLoaded && !rulesSaving ? "var(--color-accent-ink)" : "var(--color-faint)", border: "none", cursor: rulesLoaded ? "pointer" : "not-allowed", fontWeight: 700 }}
+                >
+                  {rulesSaving ? "Kaydediliyor…" : "Kaydet ve Uygula"}
+                </button>
+                {rulesSaved && <span style={{ ...mono, fontSize: "0.6rem", color: "var(--color-status-on)" }}>✓ Kaydedildi — yenileniyor…</span>}
+              </div>
+            </form>
+          </div>
+        </div>
+      )}
+
+      {/* ── Announcements tab ── */}
+      {tab === "announcements" && (
+        <div style={{ padding: "24px clamp(20px,4vw,48px)" }}>
+          {/* Add announcement form */}
+          <div style={{ background: "var(--color-bg-2)", border: "1px solid var(--color-line)", padding: 24, marginBottom: 32 }}>
+            <div style={{ ...mono, fontSize: "0.65rem", color: "var(--color-accent)", marginBottom: 20 }}>Yeni Duyuru</div>
+            <form onSubmit={addAnnouncement}>
+              <div className="flex flex-col gap-4 mb-4">
+                <label style={{ display: "flex", flexDirection: "column", gap: 6 }}>
+                  <span style={{ ...mono, fontSize: "0.55rem", color: "var(--color-faint)" }}>Mesaj</span>
+                  <input
+                    type="text"
+                    placeholder="örn. Tüm birimler kanal 2'ye geçin"
+                    value={newAnnMsg}
+                    onChange={(e) => setNewAnnMsg(e.target.value)}
+                    style={{ background: "var(--color-bg)", border: "1px solid var(--color-line)", color: "var(--color-txt)", padding: "10px 14px", fontFamily: "var(--font-mono)", fontSize: "0.75rem", outline: "none" }}
+                  />
+                </label>
+                <div className="flex gap-3">
+                  {([["normal", "Normal (Altın)"], ["alert", "Uyarı (Kırmızı)"]] as const).map(([val, lbl]) => (
+                    <label key={val} className="flex items-center gap-2 cursor-pointer">
+                      <input type="radio" name="ann-type" value={val} checked={newAnnType === val} onChange={() => setNewAnnType(val)} />
+                      <span style={{
+                        ...mono, fontSize: "0.6rem",
+                        color: val === "alert" ? "#ff4444" : "var(--color-accent)",
+                        fontWeight: newAnnType === val ? 700 : 400,
+                      }}>{lbl}</span>
+                    </label>
+                  ))}
+                </div>
+                {/* Preview */}
+                <div style={{ background: "oklch(0.10 0.006 70)", padding: "8px 16px", display: "flex", alignItems: "center", gap: 8 }}>
+                  <span style={{ ...mono, fontSize: "0.55rem", color: "var(--color-faint)" }}>Önizleme:</span>
+                  <span style={{ ...mono, fontSize: "0.65rem", fontWeight: 700, letterSpacing: "0.18em", color: newAnnType === "alert" ? "#ff4444" : "var(--color-accent)", textTransform: "uppercase" }}>
+                    {newAnnType === "alert" ? "⚠ " : "● "}{newAnnMsg || "Duyuru metni"}
+                  </span>
+                </div>
+              </div>
+              <button
+                type="submit"
+                disabled={annSaving || !newAnnMsg.trim()}
+                style={{ ...mono, fontSize: "0.65rem", padding: "10px 24px", background: newAnnMsg.trim() && !annSaving ? (newAnnType === "alert" ? "#ff4444" : "var(--color-accent)") : "var(--color-bg-3)", color: newAnnMsg.trim() && !annSaving ? "#000" : "var(--color-faint)", border: "none", cursor: newAnnMsg.trim() ? "pointer" : "not-allowed", fontWeight: 700 }}
+              >
+                {annSaving ? "Yayınlanıyor…" : "Duyuruyu Yayınla"}
+              </button>
+            </form>
+          </div>
+
+          {/* Active announcements list */}
+          {announcements.length === 0 ? (
+            <div style={{ ...mono, fontSize: "0.65rem", color: "var(--color-faint)", padding: 32, textAlign: "center" }}>Aktif duyuru yok</div>
+          ) : (
+            <div style={{ border: "1px solid var(--color-line)" }}>
+              <div style={{ display: "grid", gridTemplateColumns: "1fr 100px 140px 60px", background: "var(--color-bg-3)", borderBottom: "1px solid var(--color-line)", padding: "10px 16px", gap: 8 }}>
+                {["Mesaj", "Tip", "Tarih", ""].map((h, i) => (
+                  <span key={i} style={{ ...mono, fontSize: "0.55rem", color: "var(--color-faint)" }}>{h}</span>
+                ))}
+              </div>
+              {announcements.map((ann) => (
+                <div key={ann.id} style={{ display: "grid", gridTemplateColumns: "1fr 100px 140px 60px", padding: "12px 16px", borderBottom: "1px solid var(--color-line-soft)", alignItems: "center", gap: 8 }}>
+                  <span style={{ ...mono, fontSize: "0.65rem", color: ann.type === "alert" ? "#ff4444" : "var(--color-accent)", fontWeight: 700 }}>
+                    {ann.type === "alert" ? "⚠ " : "● "}{ann.message}
+                  </span>
+                  <span style={{ ...mono, fontSize: "0.58rem", color: ann.type === "alert" ? "#ff4444" : "var(--color-accent)" }}>
+                    {ann.type === "alert" ? "Uyarı" : "Normal"}
+                  </span>
+                  <span style={{ ...mono, fontSize: "0.58rem", color: "var(--color-faint)" }}>{new Date(ann.created_at).toLocaleString("tr-TR")}</span>
+                  <button onClick={() => deleteAnnouncement(ann.id)} style={{ ...mono, fontSize: "0.55rem", padding: "5px 10px", background: "transparent", color: "var(--color-warn)", border: "1px solid var(--color-warn)", cursor: "pointer" }}>Sil</button>
                 </div>
               ))}
             </div>

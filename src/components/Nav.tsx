@@ -17,12 +17,27 @@ export default function Nav() {
   const [scrolled, setScrolled] = useState(false)
   const [menuOpen, setMenuOpen] = useState(false)
   const { data: session } = useSession()
+  const [officerName, setOfficerName] = useState<string | null>(null)
+  const [officerBadge, setOfficerBadge] = useState<string | null>(null)
 
   useEffect(() => {
     const handleScroll = () => setScrolled(window.scrollY > 20)
     window.addEventListener("scroll", handleScroll)
     return () => window.removeEventListener("scroll", handleScroll)
   }, [])
+
+  useEffect(() => {
+    if (!session) { setOfficerName(null); setOfficerBadge(null); return }
+    fetch("/api/duty")
+      .then((r) => r.ok ? r.json() : null)
+      .then((data) => {
+        if (data?.officer) {
+          setOfficerName(data.officer.name)
+          setOfficerBadge(data.officer.badge_no)
+        }
+      })
+      .catch(() => {})
+  }, [session])
 
   return (
     <nav
@@ -42,12 +57,12 @@ export default function Nav() {
         style={{ paddingInline: "clamp(20px, 5vw, 64px)" }}
       >
         {/* Logo */}
-        <Link href="/admin" className="flex items-center gap-3 group">
+        <Link href="/" className="flex items-center gap-3 group">
           <Image
             src="/logo.png"
             alt="23rd Street Department"
-            width={44}
-            height={44}
+            width={54}
+            height={54}
             className="rounded-full"
             style={{ objectFit: "cover" }}
             priority
@@ -112,16 +127,22 @@ export default function Nav() {
         <div className="hidden md:flex items-center gap-3">
           {session ? (
             <div className="flex items-center gap-3">
-              <span
-                style={{
-                  fontFamily: "var(--font-mono)",
-                  fontSize: "0.65rem",
-                  color: "var(--color-muted)",
-                  letterSpacing: "0.1em",
-                }}
-              >
-                {session.user?.name}
-              </span>
+              <div style={{ textAlign: "right" }}>
+                {officerName ? (
+                  <>
+                    <div style={{ fontFamily: "var(--font-mono)", fontSize: "0.65rem", color: "var(--color-txt)", letterSpacing: "0.1em", fontWeight: 700, textTransform: "uppercase" }}>
+                      {officerName}
+                    </div>
+                    <div style={{ fontFamily: "var(--font-mono)", fontSize: "0.52rem", color: "var(--color-accent)", letterSpacing: "0.12em" }}>
+                      {officerBadge} · {session.user?.name}
+                    </div>
+                  </>
+                ) : (
+                  <div style={{ fontFamily: "var(--font-mono)", fontSize: "0.65rem", color: "var(--color-muted)", letterSpacing: "0.1em" }}>
+                    {session.user?.name}
+                  </div>
+                )}
+              </div>
               <button
                 onClick={() => signOut()}
                 style={{

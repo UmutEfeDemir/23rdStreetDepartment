@@ -34,10 +34,10 @@ interface Badge {
 }
 
 const CATEGORY_LABELS: Record<string, string> = {
-  unit: "Birimler",
-  license: "Lisanslar",
-  certificate: "Sertifikalar",
-  role: "Roller",
+  unit: "🛡️ Birimler",
+  license: "📋 Lisanslar",
+  certificate: "🎖️ Sertifikalar",
+  role: "⭐ Roller",
 }
 const CATEGORY_ORDER = ["unit", "license", "certificate", "role"]
 
@@ -308,8 +308,10 @@ export default function PersonnelPanel() {
             {/* Right side */}
             <div className="lg:col-span-2 flex flex-col gap-6">
               {officer && (
-                <div className="grid grid-cols-1 gap-3">
-                  <StatBox label="GÖREV SAATİ" value={formatDutyTime(officer.duty_hours)} />
+                <div className="grid grid-cols-3 gap-3">
+                  <StatBox label="TOPLAM DEVRIYE" value={formatDutyTime(officer.duty_hours)} />
+                  <StatBox label="TAMAMLANAN GÖREV" value={logs.length} />
+                  <StatBox label="SON GÖREV" value={logs.length > 0 ? new Date(logs[0].clock_in).toLocaleDateString("tr-TR") : "—"} />
                 </div>
               )}
 

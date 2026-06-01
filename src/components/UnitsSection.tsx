@@ -10,38 +10,38 @@ interface Unit {
 
 const UNITS: Unit[] = [
   {
-    code: "HPD",
-    name: "Karayolu Devriye Birimi",
-    desc: "Eyalet yollarında trafik denetimi, sürücü güvenliği ve karayolu devriyesi.",
+    code: "PATROL",
+    name: "Patrol Division",
+    desc: "Eyalet yollarında devriye, trafik denetimi ve bölge güvenliğinin sağlanması.",
     Icon: Car,
   },
   {
     code: "CID",
-    name: "Suç Soruşturma Birimi",
+    name: "Criminal Investigation Division",
     desc: "Ağır suç soruşturmaları, dedektif görevi ve delil toplama operasyonları.",
     Icon: Search,
   },
   {
     code: "SWAT",
-    name: "Özel Harekat Timi",
+    name: "Special Weapons And Tactics",
     desc: "Yüksek riskli operasyonlar, rehine müzakeresi ve taktiksel müdahale.",
     Icon: Crosshair,
   },
   {
-    code: "TFD",
-    name: "Trafik Denetleme Birimi",
+    code: "TED",
+    name: "Traffic Enforcement Division",
     desc: "Trafik ihlalleri, kaza soruşturması ve karayolu güvenlik kampanyaları.",
     Icon: AlertOctagon,
   },
   {
     code: "K9",
-    name: "K9 Köpek Birimi",
+    name: "K9 Unit",
     desc: "Arama-kurtarma operasyonları, uyuşturucu ve patlayıcı tespiti.",
     Icon: PawPrint,
   },
   {
     code: "ASD",
-    name: "Hava Destek Birimi",
+    name: "Air Support Division",
     desc: "Helikopter desteği, hava gözetleme ve uzaktan takip operasyonları.",
     Icon: Plane,
   },
@@ -80,7 +80,6 @@ export default function UnitsSection() {
                 transition: "border-color 0.2s",
               }}
             >
-              {/* Top accent line */}
               <div
                 className="absolute top-0 left-0 right-0 h-0.5"
                 style={{ background: "var(--color-accent)", opacity: 0.4 }}

@@ -1,6 +1,10 @@
 "use client"
 
+import Link from "next/link"
+
 export default function Footer() {
+  const year = new Date().getFullYear()
+
   return (
     <footer
       style={{
@@ -69,13 +73,22 @@ export default function Footer() {
           ))}
         </div>
 
-        {/* Badge */}
-        <div
+        {/* Admin access badge */}
+        <Link
+          href="/admin"
           className="flex items-center gap-2 px-4 py-2"
           style={{
             border: "1px solid var(--color-line)",
             background: "var(--color-bg-3)",
+            textDecoration: "none",
+            transition: "border-color 0.2s",
           }}
+          onMouseEnter={(e) =>
+            ((e.currentTarget as HTMLElement).style.borderColor = "var(--color-accent)")
+          }
+          onMouseLeave={(e) =>
+            ((e.currentTarget as HTMLElement).style.borderColor = "var(--color-line)")
+          }
         >
           <div
             className="w-1.5 h-1.5 rounded-full"
@@ -92,7 +105,7 @@ export default function Footer() {
           >
             Yetkili Erişim
           </span>
-        </div>
+        </Link>
       </div>
 
       <div
@@ -108,7 +121,7 @@ export default function Footer() {
             textTransform: "uppercase",
           }}
         >
-          © 2024 23rd Street Department · GTA FiveM Roleplay · Tüm hakları saklıdır
+          © {year} 23rd Street Department · Tüm hakları saklıdır
         </p>
       </div>
     </footer>
