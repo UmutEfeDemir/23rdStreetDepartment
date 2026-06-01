@@ -1,4 +1,23 @@
-const SLOTS = Array.from({ length: 6 }, (_, i) => i + 1)
+import Image from "next/image"
+
+const PHOTOS = [
+  { src: "/gallery/g01.png", span: 2, ratio: "16/9" },
+  { src: "/gallery/g02.png", span: 1, ratio: "4/3" },
+  { src: "/gallery/g03.png", span: 1, ratio: "4/3" },
+  { src: "/gallery/g04.png", span: 1, ratio: "4/3" },
+  { src: "/gallery/g05.png", span: 1, ratio: "4/3" },
+  { src: "/gallery/g06.png", span: 2, ratio: "16/9" },
+  { src: "/gallery/g07.png", span: 1, ratio: "4/3" },
+  { src: "/gallery/g08.png", span: 1, ratio: "4/3" },
+  { src: "/gallery/g09.png", span: 2, ratio: "16/9" },
+  { src: "/gallery/g10.png", span: 1, ratio: "4/3" },
+  { src: "/gallery/g11.png", span: 1, ratio: "4/3" },
+  { src: "/gallery/g12.png", span: 1, ratio: "4/3" },
+  { src: "/gallery/g13.png", span: 1, ratio: "4/3" },
+  { src: "/gallery/g14.png", span: 2, ratio: "16/9" },
+  { src: "/gallery/g15.png", span: 1, ratio: "4/3" },
+  { src: "/gallery/g16.png", span: 1, ratio: "4/3" },
+]
 
 export default function Gallery() {
   return (
@@ -22,79 +41,50 @@ export default function Gallery() {
           Saha Görüntüleri
         </h2>
 
-        <div className="grid grid-cols-2 md:grid-cols-3 gap-3">
-          {SLOTS.map((n) => (
+        <div
+          style={{
+            display: "grid",
+            gridTemplateColumns: "repeat(2, 1fr)",
+            gap: 8,
+          }}
+        >
+          {PHOTOS.map((photo, i) => (
             <div
-              key={n}
+              key={i}
               className="relative overflow-hidden"
               style={{
-                aspectRatio: n === 1 || n === 6 ? "16/9" : "4/3",
-                gridColumn: n === 1 || n === 6 ? "span 2" : "span 1",
+                gridColumn: `span ${photo.span}`,
+                aspectRatio: photo.ratio,
                 background: "var(--color-bg-3)",
                 border: "1px solid var(--color-line)",
-                borderRadius: 4,
               }}
             >
-              {/* Corner decorations */}
+              <Image
+                src={photo.src}
+                alt={`Saha görüntüsü ${i + 1}`}
+                fill
+                sizes={photo.span === 2 ? "100vw" : "50vw"}
+                style={{ objectFit: "cover" }}
+                quality={85}
+              />
+              {/* corner accent */}
               <div
-                className="absolute top-0 left-0 w-4 h-4 z-10"
+                className="absolute top-0 left-0 w-4 h-4 z-10 pointer-events-none"
                 style={{
                   borderTop: "1.5px solid var(--color-accent)",
                   borderLeft: "1.5px solid var(--color-accent)",
                 }}
               />
               <div
-                className="absolute bottom-0 right-0 w-4 h-4 z-10"
+                className="absolute bottom-0 right-0 w-4 h-4 z-10 pointer-events-none"
                 style={{
                   borderBottom: "1.5px solid var(--color-line)",
                   borderRight: "1.5px solid var(--color-line)",
                 }}
               />
-
-              <div className="absolute inset-0 flex flex-col items-center justify-center gap-2">
-                <svg
-                  width="28"
-                  height="28"
-                  fill="none"
-                  viewBox="0 0 24 24"
-                  stroke="currentColor"
-                  style={{ color: "oklch(0.34 0.012 75 / 0.4)" }}
-                >
-                  <path
-                    strokeLinecap="round"
-                    strokeLinejoin="round"
-                    strokeWidth={1}
-                    d="M4 16l4.586-4.586a2 2 0 012.828 0L16 16m-2-2l1.586-1.586a2 2 0 012.828 0L20 14m-6-6h.01M6 20h12a2 2 0 002-2V6a2 2 0 00-2-2H6a2 2 0 00-2 2v12a2 2 0 002 2z"
-                  />
-                </svg>
-                <span
-                  style={{
-                    fontFamily: "var(--font-mono)",
-                    fontSize: "0.55rem",
-                    letterSpacing: "0.18em",
-                    color: "oklch(0.34 0.012 75 / 0.35)",
-                    textTransform: "uppercase",
-                  }}
-                >
-                  Görsel {n.toString().padStart(2, "0")}
-                </span>
-              </div>
             </div>
           ))}
         </div>
-
-        <p
-          className="mt-4 text-center"
-          style={{
-            fontFamily: "var(--font-mono)",
-            fontSize: "0.6rem",
-            letterSpacing: "0.14em",
-            color: "var(--color-faint)",
-            textTransform: "uppercase",
-          }}
-        >
-          Görseller admin panelden yüklenebilir
-        </p>
       </div>
     </section>
   )
