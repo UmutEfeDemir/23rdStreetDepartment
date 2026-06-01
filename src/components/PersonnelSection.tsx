@@ -16,7 +16,7 @@ interface OfficerRow {
 const UNITS: UnitFilter[] = ["TÜM", "High Command", "Sup. Command", "Supervisor", "Polis"]
 
 function nameToAvatar(name: string) {
-  return `/gallery/${name.toLowerCase().replace(/\s+/g, "-").replace(/[^a-z0-9-]/g, "")}.png`
+  return `/gallery/${name.trim().toLowerCase().replace(/\s+/g, "-").replace(/[^a-z0-9-]/g, "").replace(/^-+|-+$/g, "")}.png`
 }
 
 function OfficerAvatar({ name }: { name: string }) {
