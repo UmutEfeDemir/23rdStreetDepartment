@@ -210,11 +210,8 @@ export default function PersonnelPanel() {
             {/* Right side */}
             <div className="lg:col-span-2 flex flex-col gap-6">
               {officer && (
-                <div className="grid grid-cols-2 sm:grid-cols-4 gap-3">
-                  <StatBox label="Görev Saati" value={officer.duty_hours} mono="G.SAATİ" />
-                  <StatBox label="Devriye" value={officer.patrols} mono="DEVRİYE" />
-                  <StatBox label="Takdir" value={officer.commendations} mono="TAKDİR" />
-                  <StatBox label="İhtar" value={officer.warnings} mono="İHTAR" />
+                <div className="grid grid-cols-1 gap-3">
+                  <StatBox label="Görev Saati" value={officer.duty_hours} mono="GÖREV SAATİ" />
                 </div>
               )}
 
