@@ -15,8 +15,25 @@ interface OfficerRow {
 
 const UNITS: UnitFilter[] = ["TÜM", "High Command", "Sup. Command", "Supervisor", "Polis"]
 
-function Monogram({ name }: { name: string }) {
+function nameToAvatar(name: string) {
+  return `/gallery/${name.toLowerCase().replace(/\s+/g, "-").replace(/[^a-z0-9-]/g, "")}.png`
+}
+
+function OfficerAvatar({ name }: { name: string }) {
   const initials = name.split(/[\s.]/).filter(Boolean).map((p) => p[0]).join("").slice(0, 2).toUpperCase()
+  const [failed, setFailed] = useState(false)
+  if (!failed) {
+    return (
+      // eslint-disable-next-line @next/next/no-img-element
+      <img
+        src={nameToAvatar(name)}
+        alt={name}
+        onError={() => setFailed(true)}
+        className="rounded-full flex-shrink-0"
+        style={{ width: 32, height: 32, objectFit: "cover", border: "1px solid var(--color-line)" }}
+      />
+    )
+  }
   return (
     <div className="rounded-full flex items-center justify-center text-xs font-bold flex-shrink-0" style={{ width: 32, height: 32, background: "var(--color-bg-3)", border: "1px solid var(--color-line)", fontFamily: "var(--font-mono)", color: "var(--color-accent)" }}>
       {initials}
@@ -93,7 +110,7 @@ export default function PersonnelSection() {
                   <div key={o.id} className="grid table-row-hover cursor-default" style={{ gridTemplateColumns: "100px 1fr 180px 140px 120px", padding: "12px 16px", borderBottom: i < filtered.length - 1 ? "1px solid var(--color-line-soft)" : "none", alignItems: "center" }}>
                     <span style={{ fontFamily: "var(--font-mono)", fontSize: "0.65rem", letterSpacing: "0.12em", color: "var(--color-accent)" }}>{o.badge_no}</span>
                     <div className="flex items-center gap-3">
-                      <Monogram name={o.name} />
+                      <OfficerAvatar name={o.name} />
                       <span style={{ fontFamily: "var(--font-body)", fontSize: "0.9rem", color: "var(--color-txt)", fontWeight: 500 }}>{o.name}</span>
                     </div>
                     <span style={{ fontFamily: "var(--font-mono)", fontSize: "0.62rem", letterSpacing: "0.1em", color: "var(--color-muted)", textTransform: "uppercase" }}>{o.rank}</span>
