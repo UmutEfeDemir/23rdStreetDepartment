@@ -7,7 +7,16 @@ import Image from "next/image"
 import Link from "next/link"
 
 type AppStatus = "pending" | "interview" | "accepted" | "rejected"
-type Tab = "applications" | "officers"
+type Tab = "applications" | "officers" | "access"
+
+interface AccessRequest {
+  id: string
+  discord_id: string
+  discord_name: string
+  discord_avatar: string
+  status: string
+  created_at: string
+}
 
 interface Application {
   id: string
@@ -105,6 +114,8 @@ export default function AdminDashboard() {
   const [saving, setSaving] = useState(false)
   const [editTarget, setEditTarget] = useState<OfficerRow | null>(null)
   const [editForm, setEditForm] = useState<OfficerForm>(emptyForm)
+  const [accessRequests, setAccessRequests] = useState<AccessRequest[]>([])
+  const [accessLoading, setAccessLoading] = useState(true)
 
   const router = useRouter()
 
@@ -117,6 +128,10 @@ export default function AdminDashboard() {
       .then((r) => r.json())
       .then((d) => { setOfficers(Array.isArray(d) ? d.sort((a, b) => Number(a.badge_no) - Number(b.badge_no)) : []); setOfficersLoading(false) })
       .catch(() => setOfficersLoading(false))
+    fetch("/api/access-request")
+      .then((r) => r.json())
+      .then((d) => { setAccessRequests(Array.isArray(d) ? d : []); setAccessLoading(false) })
+      .catch(() => setAccessLoading(false))
   }, [])
 
   const updateStatus = async (id: string, status: AppStatus) => {
@@ -147,7 +162,8 @@ export default function AdminDashboard() {
 
   const openEdit = (o: OfficerRow) => {
     setEditTarget(o)
-    setEditForm({ discord_id: o.discord_id ?? "", badge_no: o.badge_no, name: o.name, rank: o.rank, unit: o.unit, status: o.status, seniority_months: o.seniority_months, rank_progress: o.rank_progress, next_rank: o.next_rank ?? "", is_command: o.is_command })
+    const validUnit = UNITS.includes(o.unit) ? o.unit : UNITS[0]
+    setEditForm({ discord_id: o.discord_id ?? "", badge_no: o.badge_no, name: o.name, rank: o.rank, unit: validUnit, status: o.status, seniority_months: o.seniority_months, rank_progress: o.rank_progress, next_rank: o.next_rank ?? "", is_command: o.is_command })
   }
 
   const saveEdit = async (e: React.FormEvent) => {
@@ -233,9 +249,9 @@ export default function AdminDashboard() {
 
       {/* Tabs */}
       <div style={{ background: "var(--color-bg-2)", borderBottom: "1px solid var(--color-line)", padding: "0 clamp(20px,4vw,48px)", display: "flex", gap: 4 }}>
-        {(["applications", "officers"] as Tab[]).map((t) => (
+        {(["applications", "officers", "access"] as Tab[]).map((t) => (
           <button key={t} onClick={() => setTab(t)} style={{ ...mono, fontSize: "0.62rem", padding: "14px 20px", background: "transparent", border: "none", borderBottom: tab === t ? "2px solid var(--color-accent)" : "2px solid transparent", color: tab === t ? "var(--color-accent)" : "var(--color-faint)", cursor: "pointer" }}>
-            {t === "applications" ? `Başvurular (${apps.length})` : `Personel (${officers.length})`}
+            {t === "applications" ? `Başvurular (${apps.length})` : t === "officers" ? `Personel (${officers.length})` : `Erişim Talepleri (${accessRequests.filter(r => r.status === "pending").length})`}
           </button>
         ))}
       </div>
@@ -352,6 +368,65 @@ export default function AdminDashboard() {
                   <span style={{ ...mono, fontSize: "0.58rem", color: "var(--color-muted)" }}>{o.unit}</span>
                   <span style={{ ...mono, fontSize: "0.6rem", color: o.status === "Görevde" ? "var(--color-status-on)" : "var(--color-muted)" }}>{o.status}</span>
                   <button onClick={() => openEdit(o)} style={{ ...mono, fontSize: "0.55rem", padding: "5px 10px", border: "1px solid var(--color-accent)", color: "var(--color-accent)", background: "transparent", cursor: "pointer" }}>Düzenle</button>
+                </div>
+              ))}
+            </div>
+          )}
+        </div>
+      )}
+
+      {/* ── Access Requests tab ── */}
+      {tab === "access" && (
+        <div style={{ padding: "24px clamp(20px,4vw,48px)" }}>
+          {accessLoading ? (
+            <div style={{ ...mono, fontSize: "0.65rem", color: "var(--color-faint)", padding: 32, textAlign: "center" }}>YÜKLENİYOR…</div>
+          ) : accessRequests.length === 0 ? (
+            <div style={{ ...mono, fontSize: "0.65rem", color: "var(--color-faint)", padding: 32, textAlign: "center" }}>Bekleyen erişim talebi yok</div>
+          ) : (
+            <div style={{ border: "1px solid var(--color-line)" }}>
+              <div style={{ display: "grid", gridTemplateColumns: "48px 1fr 200px 130px 140px", background: "var(--color-bg-3)", borderBottom: "1px solid var(--color-line)", padding: "10px 16px", gap: 8 }}>
+                {["", "Discord", "ID", "Tarih", ""].map((h, i) => (
+                  <span key={i} style={{ ...mono, fontSize: "0.55rem", color: "var(--color-faint)" }}>{h}</span>
+                ))}
+              </div>
+              {accessRequests.map((r) => (
+                <div key={r.id} style={{ display: "grid", gridTemplateColumns: "48px 1fr 200px 130px 140px", padding: "12px 16px", borderBottom: "1px solid var(--color-line-soft)", alignItems: "center", gap: 8 }}>
+                  {r.discord_avatar ? (
+                    // eslint-disable-next-line @next/next/no-img-element
+                    <img src={r.discord_avatar} alt="" className="rounded-full" style={{ width: 36, height: 36 }} />
+                  ) : (
+                    <div className="rounded-full flex items-center justify-center" style={{ width: 36, height: 36, background: "#5865F2", ...mono, fontSize: "0.6rem", color: "#fff" }}>
+                      {r.discord_name?.[0]?.toUpperCase()}
+                    </div>
+                  )}
+                  <div>
+                    <div style={{ fontFamily: "var(--font-body)", fontSize: "0.9rem", color: "var(--color-txt)", fontWeight: 500 }}>{r.discord_name}</div>
+                    <div style={{ ...mono, fontSize: "0.55rem", color: r.status === "pending" ? "var(--color-accent)" : r.status === "approved" ? "var(--color-status-on)" : "var(--color-warn)", marginTop: 2 }}>
+                      {r.status === "pending" ? "● Beklemede" : r.status === "approved" ? "● Onaylandı" : "● Reddedildi"}
+                    </div>
+                  </div>
+                  <span style={{ ...mono, fontSize: "0.58rem", color: "var(--color-faint)" }}>{r.discord_id}</span>
+                  <span style={{ ...mono, fontSize: "0.58rem", color: "var(--color-faint)" }}>{new Date(r.created_at).toLocaleDateString("tr-TR")}</span>
+                  <div className="flex gap-2">
+                    {r.status === "pending" && (
+                      <>
+                        <button onClick={async () => {
+                          await fetch("/api/access-request", { method: "PATCH", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ id: r.id, status: "approved" }) })
+                          setAccessRequests(p => p.map(x => x.id === r.id ? { ...x, status: "approved" } : x))
+                        }} style={{ ...mono, fontSize: "0.55rem", padding: "5px 10px", background: "var(--color-status-on)", color: "#000", border: "none", cursor: "pointer", fontWeight: 700 }}>Onayla</button>
+                        <button onClick={async () => {
+                          await fetch("/api/access-request", { method: "PATCH", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ id: r.id, status: "rejected" }) })
+                          setAccessRequests(p => p.map(x => x.id === r.id ? { ...x, status: "rejected" } : x))
+                        }} style={{ ...mono, fontSize: "0.55rem", padding: "5px 10px", background: "transparent", color: "var(--color-warn)", border: "1px solid var(--color-warn)", cursor: "pointer" }}>Reddet</button>
+                      </>
+                    )}
+                    {r.status !== "pending" && (
+                      <button onClick={async () => {
+                        await fetch("/api/access-request", { method: "DELETE", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ id: r.id }) })
+                        setAccessRequests(p => p.filter(x => x.id !== r.id))
+                      }} style={{ ...mono, fontSize: "0.55rem", padding: "5px 10px", background: "transparent", color: "var(--color-faint)", border: "1px solid var(--color-line)", cursor: "pointer" }}>Sil</button>
+                    )}
+                  </div>
                 </div>
               ))}
             </div>

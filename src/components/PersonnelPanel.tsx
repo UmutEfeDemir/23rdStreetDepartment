@@ -95,6 +95,7 @@ export default function PersonnelPanel() {
   const [logs, setLogs] = useState<DutyLog[]>([])
   const [loading, setLoading] = useState(false)
   const [dutyLoading, setDutyLoading] = useState(false)
+  const [requestStatus, setRequestStatus] = useState<"idle" | "sending" | "sent" | "exists">("idle")
 
   const fetchDuty = useCallback(async () => {
     setLoading(true)
@@ -208,8 +209,34 @@ export default function PersonnelPanel() {
                   </div>
                 </>
               ) : (
-                <div className="py-4 text-center" style={{ ...mono, fontSize: "0.65rem", color: "var(--color-faint)" }}>
-                  Discord hesabınız sistemde kayıtlı değil.<br />Yetkili ile iletişime geçin.
+                <div className="py-4 flex flex-col gap-3">
+                  <div style={{ ...mono, fontSize: "0.6rem", color: "var(--color-faint)", textAlign: "center" }}>
+                    Discord hesabınız henüz yetkilendirilmedi.
+                  </div>
+                  {requestStatus === "sent" ? (
+                    <div style={{ ...mono, fontSize: "0.6rem", color: "var(--color-status-on)", textAlign: "center", padding: "10px", border: "1px solid var(--color-status-on)" }}>
+                      ✓ Talebiniz iletildi. Admin onayını bekleyin.
+                    </div>
+                  ) : requestStatus === "exists" ? (
+                    <div style={{ ...mono, fontSize: "0.6rem", color: "var(--color-accent)", textAlign: "center", padding: "10px", border: "1px solid var(--color-line)" }}>
+                      Daha önce talep gönderdiniz. Admin onayını bekleyin.
+                    </div>
+                  ) : (
+                    <button
+                      onClick={async () => {
+                        setRequestStatus("sending")
+                        const res = await fetch("/api/access-request", { method: "POST" })
+                        const data = await res.json()
+                        if (res.ok) setRequestStatus("sent")
+                        else if (data.error === "Zaten talep gönderildi") setRequestStatus("exists")
+                        else setRequestStatus("idle")
+                      }}
+                      disabled={requestStatus === "sending"}
+                      style={{ ...mono, fontSize: "0.62rem", padding: "10px 20px", background: "var(--color-accent)", color: "var(--color-accent-ink)", border: "none", cursor: "pointer", fontWeight: 700 }}
+                    >
+                      {requestStatus === "sending" ? "Gönderiliyor…" : "Erişim Talebi Gönder"}
+                    </button>
+                  )}
                 </div>
               )}
             </div>
