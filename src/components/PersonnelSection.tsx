@@ -1,6 +1,6 @@
 "use client"
 
-import { useState, useEffect } from "react"
+import { useState, useEffect, useRef } from "react"
 
 type UnitFilter = "TÜM" | "High Command" | "Sup. Command" | "Supervisor" | "Polis"
 
@@ -21,17 +21,23 @@ function nameToAvatar(name: string) {
 
 function OfficerAvatar({ name }: { name: string }) {
   const initials = name.split(/[\s.]/).filter(Boolean).map((p) => p[0]).join("").slice(0, 2).toUpperCase()
-  const [failed, setFailed] = useState(false)
-  if (!failed) {
+  const [loaded, setLoaded] = useState(false)
+  const src = nameToAvatar(name)
+  const mountedRef = useRef(true)
+
+  useEffect(() => {
+    mountedRef.current = true
+    const img = new window.Image()
+    img.onload = () => { if (mountedRef.current) setLoaded(true) }
+    img.onerror = () => { if (mountedRef.current) setLoaded(false) }
+    img.src = src
+    return () => { mountedRef.current = false }
+  }, [src])
+
+  if (loaded) {
     return (
       // eslint-disable-next-line @next/next/no-img-element
-      <img
-        src={nameToAvatar(name)}
-        alt={name}
-        onError={() => setFailed(true)}
-        className="rounded-full flex-shrink-0"
-        style={{ width: 32, height: 32, objectFit: "cover", border: "1px solid var(--color-line)" }}
-      />
+      <img src={src} alt={name} className="rounded-full flex-shrink-0" style={{ width: 32, height: 32, objectFit: "cover", border: "1px solid var(--color-line)" }} />
     )
   }
   return (
