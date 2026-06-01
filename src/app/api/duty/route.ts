@@ -20,7 +20,8 @@ export async function GET() {
     SELECT * FROM duty_logs WHERE officer_id = ${officer.id} AND clock_out IS NOT NULL
     ORDER BY clock_in DESC LIMIT 10
   `
-  return Response.json({ officer, activeDuty: activeDuty[0] ?? null, logs })
+  const licenses = await sql`SELECT license_type FROM officer_licenses WHERE officer_id = ${officer.id} ORDER BY granted_at ASC`
+  return Response.json({ officer, activeDuty: activeDuty[0] ?? null, logs, licenses: licenses.map((l) => (l as { license_type: string }).license_type) })
 }
 
 export async function POST() {

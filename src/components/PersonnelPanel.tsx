@@ -88,11 +88,47 @@ function ElapsedTimer({ clockIn }: { clockIn: string }) {
   return <span style={{ fontFamily: "var(--font-mono)", fontSize: "1.6rem", fontWeight: 700, color: "var(--color-status-on)", letterSpacing: "0.06em" }}>{elapsed}</span>
 }
 
+const LICENSE_TYPES = ["Detective Unit", "Swat Unit", "CCW License", "AR License", "Air License", "HSU License", "Marry License"]
+const ROLE_TYPES = ["FTS", "FTO"]
+
+function nameToAvatar(name: string) {
+  return `/gallery/${name.trim().toLowerCase().replace(/\s+/g, "-").replace(/[^a-z0-9-]/g, "").replace(/^-+|-+$/g, "")}.png`
+}
+
+function CharacterAvatar({ name, discordImage }: { name: string; discordImage?: string | null }) {
+  const [loaded, setLoaded] = useState(false)
+  const src = nameToAvatar(name)
+
+  useEffect(() => {
+    const img = new window.Image()
+    img.onload = () => setLoaded(true)
+    img.onerror = () => setLoaded(false)
+    img.src = src
+  }, [src])
+
+  if (loaded) {
+    return (
+      // eslint-disable-next-line @next/next/no-img-element
+      <img src={src} alt={name} className="rounded-full" style={{ width: 60, height: 60, objectFit: "cover", border: "2px solid var(--color-accent)" }} />
+    )
+  }
+  if (discordImage) {
+    // eslint-disable-next-line @next/next/no-img-element
+    return <img src={discordImage} alt="Profil" className="rounded-full" style={{ width: 60, height: 60, border: "2px solid var(--color-accent)" }} />
+  }
+  return (
+    <div className="rounded-full flex items-center justify-center" style={{ width: 60, height: 60, background: "var(--color-bg-2)", border: "2px solid var(--color-accent)", fontFamily: "var(--font-display)", fontSize: "1.2rem", color: "var(--color-accent)" }}>
+      {name[0]?.toUpperCase() ?? "?"}
+    </div>
+  )
+}
+
 export default function PersonnelPanel() {
   const { data: session, status } = useSession()
   const [officer, setOfficer] = useState<OfficerRow | null>(null)
   const [activeDuty, setActiveDuty] = useState<{ id: string; clock_in: string } | null>(null)
   const [logs, setLogs] = useState<DutyLog[]>([])
+  const [licenses, setLicenses] = useState<string[]>([])
   const [loading, setLoading] = useState(false)
   const [dutyLoading, setDutyLoading] = useState(false)
   const [requestStatus, setRequestStatus] = useState<"idle" | "sending" | "sent" | "exists">("idle")
@@ -105,6 +141,7 @@ export default function PersonnelPanel() {
       setOfficer(data.officer)
       setActiveDuty(data.activeDuty)
       setLogs(data.logs ?? [])
+      setLicenses(data.licenses ?? [])
     }
     setLoading(false)
   }, [])
@@ -146,7 +183,9 @@ export default function PersonnelPanel() {
             {/* Profile card */}
             <div className="lg:col-span-1 p-6 flex flex-col gap-5" style={{ background: "var(--color-bg-3)", border: "1px solid var(--color-line)" }}>
               <div className="flex items-center gap-4">
-                {session.user?.image ? (
+                {officer ? (
+                  <CharacterAvatar name={officer.name} discordImage={session.user?.image} />
+                ) : session.user?.image ? (
                   // eslint-disable-next-line @next/next/no-img-element
                   <img src={session.user.image} alt="Profil" className="rounded-full" style={{ width: 60, height: 60, border: "2px solid var(--color-accent)" }} />
                 ) : (
@@ -246,6 +285,45 @@ export default function PersonnelPanel() {
               {officer && (
                 <div className="grid grid-cols-1 gap-3">
                   <StatBox label="GÖREV SAATİ" value={formatDutyTime(officer.duty_hours)} />
+                </div>
+              )}
+
+              {/* Licenses & Roles */}
+              {officer && (licenses.length > 0) && (
+                <div style={{ background: "var(--color-bg-3)", border: "1px solid var(--color-line)" }}>
+                  <div className="px-5 py-3" style={{ borderBottom: "1px solid var(--color-line)" }}>
+                    <span style={{ ...mono, fontSize: "0.62rem", color: "var(--color-faint)" }}>Lisanslar ve Roller</span>
+                  </div>
+                  <div className="px-5 py-4 flex flex-col gap-4">
+                    {(() => {
+                      const myLicenses = licenses.filter((l) => LICENSE_TYPES.includes(l))
+                      const myRoles = licenses.filter((l) => ROLE_TYPES.includes(l))
+                      return (
+                        <>
+                          {myLicenses.length > 0 && (
+                            <div>
+                              <div style={{ ...mono, fontSize: "0.55rem", color: "var(--color-faint)", marginBottom: 8 }}>Lisanslar</div>
+                              <div className="flex flex-wrap gap-2">
+                                {myLicenses.map((l) => (
+                                  <span key={l} style={{ ...mono, fontSize: "0.58rem", padding: "4px 10px", background: "var(--color-bg-2)", border: "1px solid var(--color-accent)", color: "var(--color-accent)" }}>{l}</span>
+                                ))}
+                              </div>
+                            </div>
+                          )}
+                          {myRoles.length > 0 && (
+                            <div>
+                              <div style={{ ...mono, fontSize: "0.55rem", color: "var(--color-faint)", marginBottom: 8 }}>Roller</div>
+                              <div className="flex flex-wrap gap-2">
+                                {myRoles.map((r) => (
+                                  <span key={r} style={{ ...mono, fontSize: "0.58rem", padding: "4px 10px", background: "var(--color-bg-2)", border: "1px solid var(--color-status-on)", color: "var(--color-status-on)" }}>{r}</span>
+                                ))}
+                              </div>
+                            </div>
+                          )}
+                        </>
+                      )
+                    })()}
+                  </div>
                 </div>
               )}
 

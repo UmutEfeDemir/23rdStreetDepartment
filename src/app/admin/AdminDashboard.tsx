@@ -46,6 +46,10 @@ interface OfficerRow {
   next_rank: string | null
 }
 
+const LICENSE_TYPES = ["Detective Unit", "Swat Unit", "CCW License", "AR License", "Air License", "HSU License", "Marry License"]
+const ROLE_TYPES = ["FTS", "FTO"]
+const ALL_LICENSE_TYPES = [...LICENSE_TYPES, ...ROLE_TYPES]
+
 const STATUS_LABELS: Record<AppStatus, string> = { pending: "Beklemede", interview: "Mülakat", accepted: "Kabul", rejected: "Red" }
 const STATUS_COLORS: Record<AppStatus, string> = { pending: "var(--color-accent)", interview: "oklch(0.72 0.16 230)", accepted: "var(--color-status-on)", rejected: "var(--color-warn)" }
 const UNITS = ["High Command", "Sup. Command", "Supervisor", "Polis"]
@@ -116,6 +120,7 @@ export default function AdminDashboard() {
   const [editForm, setEditForm] = useState<OfficerForm>(emptyForm)
   const [accessRequests, setAccessRequests] = useState<AccessRequest[]>([])
   const [accessLoading, setAccessLoading] = useState(true)
+  const [editLicenses, setEditLicenses] = useState<string[]>([])
 
   const router = useRouter()
 
@@ -160,10 +165,26 @@ export default function AdminDashboard() {
     if (editTarget?.id === id) setEditTarget(null)
   }
 
-  const openEdit = (o: OfficerRow) => {
-    setEditTarget(o)
+  const openEdit = async (o: OfficerRow) => {
     const validUnit = UNITS.includes(o.unit) ? o.unit : UNITS[0]
     setEditForm({ discord_id: o.discord_id ?? "", badge_no: o.badge_no, name: o.name, rank: o.rank, unit: validUnit, status: o.status, seniority_months: o.seniority_months, rank_progress: o.rank_progress, next_rank: o.next_rank ?? "", is_command: o.is_command })
+    setEditLicenses([])
+    setEditTarget(o)
+    const res = await fetch(`/api/licenses?officer_id=${o.id}`)
+    if (res.ok) {
+      const rows = await res.json()
+      setEditLicenses(Array.isArray(rows) ? rows.map((r: { license_type: string }) => r.license_type) : [])
+    }
+  }
+
+  const toggleLicense = async (officerId: string, licenseType: string, checked: boolean) => {
+    if (checked) {
+      await fetch("/api/licenses", { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ officer_id: officerId, license_type: licenseType }) })
+      setEditLicenses((p) => [...p, licenseType])
+    } else {
+      await fetch("/api/licenses", { method: "DELETE", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ officer_id: officerId, license_type: licenseType }) })
+      setEditLicenses((p) => p.filter((l) => l !== licenseType))
+    }
   }
 
   const saveEdit = async (e: React.FormEvent) => {
@@ -194,6 +215,42 @@ export default function AdminDashboard() {
             </div>
             <form onSubmit={saveEdit}>
               <OfficerFormFields form={editForm} setForm={setEditForm} />
+
+              {/* License management */}
+              <div style={{ marginTop: 24, borderTop: "1px solid var(--color-line)", paddingTop: 20 }}>
+                <div style={{ ...mono, fontSize: "0.6rem", color: "var(--color-faint)", marginBottom: 14 }}>Lisanslar ve Roller</div>
+                <div style={{ marginBottom: 10 }}>
+                  <div style={{ ...mono, fontSize: "0.55rem", color: "var(--color-faint)", marginBottom: 8 }}>Lisanslar</div>
+                  <div className="flex flex-wrap gap-3">
+                    {LICENSE_TYPES.map((lt) => (
+                      <label key={lt} className="flex items-center gap-2 cursor-pointer">
+                        <input
+                          type="checkbox"
+                          checked={editLicenses.includes(lt)}
+                          onChange={(e) => editTarget && toggleLicense(editTarget.id, lt, e.target.checked)}
+                        />
+                        <span style={{ ...mono, fontSize: "0.6rem", color: editLicenses.includes(lt) ? "var(--color-accent)" : "var(--color-muted)" }}>{lt}</span>
+                      </label>
+                    ))}
+                  </div>
+                </div>
+                <div>
+                  <div style={{ ...mono, fontSize: "0.55rem", color: "var(--color-faint)", marginBottom: 8 }}>Roller</div>
+                  <div className="flex flex-wrap gap-3">
+                    {ROLE_TYPES.map((rt) => (
+                      <label key={rt} className="flex items-center gap-2 cursor-pointer">
+                        <input
+                          type="checkbox"
+                          checked={editLicenses.includes(rt)}
+                          onChange={(e) => editTarget && toggleLicense(editTarget.id, rt, e.target.checked)}
+                        />
+                        <span style={{ ...mono, fontSize: "0.6rem", color: editLicenses.includes(rt) ? "var(--color-status-on)" : "var(--color-muted)" }}>{rt}</span>
+                      </label>
+                    ))}
+                  </div>
+                </div>
+              </div>
+
               <div className="flex gap-3 mt-6">
                 <button type="submit" disabled={saving} style={{ ...mono, fontSize: "0.65rem", padding: "10px 24px", background: "var(--color-accent)", color: "var(--color-accent-ink)", border: "none", cursor: "pointer", fontWeight: 700 }}>
                   {saving ? "Kaydediliyor…" : "Kaydet"}
