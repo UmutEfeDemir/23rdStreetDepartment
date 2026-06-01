@@ -10,8 +10,13 @@ export async function GET() {
 
   const sql = getDb()
 
-  const accessReq = await sql`SELECT status FROM access_requests WHERE discord_id = ${discordId} LIMIT 1`
-  const accessStatus: string | null = (accessReq[0] as { status?: string } | undefined)?.status ?? null
+  let accessStatus: string | null = null
+  try {
+    const accessReq = await sql`SELECT status FROM access_requests WHERE discord_id = ${discordId} LIMIT 1`
+    accessStatus = (accessReq[0] as { status?: string } | undefined)?.status ?? null
+  } catch {
+    // table may not exist yet
+  }
 
   const officers = await sql`SELECT * FROM officers_db WHERE discord_id = ${discordId} LIMIT 1`
   if (!officers.length) return Response.json({ officer: null, activeDuty: null, logs: [], accessStatus })

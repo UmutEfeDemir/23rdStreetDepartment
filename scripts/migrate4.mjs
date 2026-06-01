@@ -9,7 +9,7 @@ const sql = neon(DATABASE_URL)
 await sql`
   CREATE TABLE IF NOT EXISTS officer_licenses (
     id SERIAL PRIMARY KEY,
-    officer_id INTEGER NOT NULL,
+    officer_id UUID NOT NULL REFERENCES officers_db(id) ON DELETE CASCADE,
     license_type TEXT NOT NULL,
     granted_at TIMESTAMPTZ NOT NULL DEFAULT now(),
     UNIQUE(officer_id, license_type)

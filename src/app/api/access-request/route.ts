@@ -47,6 +47,11 @@ export async function DELETE(req: NextRequest) {
   if (!(await isAdmin())) return Response.json({ error: "Yetkisiz" }, { status: 401 })
   const { id } = await req.json()
   const sql = getDb()
+  const rows = await sql`SELECT discord_id FROM access_requests WHERE id = ${id} LIMIT 1`
+  if (rows.length > 0) {
+    const discordId = (rows[0] as { discord_id: string }).discord_id
+    await sql`UPDATE officers_db SET discord_id = NULL WHERE discord_id = ${discordId}`
+  }
   await sql`DELETE FROM access_requests WHERE id = ${id}`
   return Response.json({ success: true })
 }

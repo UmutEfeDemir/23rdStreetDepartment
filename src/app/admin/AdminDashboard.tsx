@@ -276,54 +276,115 @@ export default function AdminDashboard() {
     <div style={{ minHeight: "100vh", background: "var(--color-bg)" }}>
 
       {/* Link to Officer Modal */}
-      {linkingRequest && (
-        <div style={{ position: "fixed", inset: 0, background: "oklch(0 0 0 / 0.75)", zIndex: 300, display: "flex", alignItems: "center", justifyContent: "center", padding: 24 }}>
-          <div style={{ background: "var(--color-bg-2)", border: "1px solid var(--color-line)", padding: 32, width: "100%", maxWidth: 500 }}>
-            <div className="flex justify-between items-center mb-6">
-              <span style={{ ...mono, fontSize: "0.65rem", color: "var(--color-accent)" }}>
-                {linkIsApproval ? "Onayla ve Memura Bağla" : isLinked(linkingRequest.discord_id) ? "Bağlantıyı Güncelle" : "Memura Bağla"}
-              </span>
-              <button onClick={closeLinkModal} style={{ ...mono, fontSize: "0.6rem", color: "var(--color-faint)", border: "1px solid var(--color-line)", padding: "5px 12px", background: "transparent", cursor: "pointer" }}>✕ Kapat</button>
-            </div>
-            <div style={{ background: "var(--color-bg-3)", border: "1px solid var(--color-line)", padding: "12px 16px", marginBottom: 20 }}>
-              <div style={{ ...mono, fontSize: "0.55rem", color: "var(--color-faint)", marginBottom: 4 }}>Discord Kullanıcısı</div>
-              <div style={{ fontFamily: "var(--font-body)", fontSize: "0.9rem", color: "var(--color-txt)", fontWeight: 600 }}>{linkingRequest.discord_name}</div>
-              <div style={{ ...mono, fontSize: "0.58rem", color: "var(--color-faint)", marginTop: 2 }}>ID: {linkingRequest.discord_id}</div>
-            </div>
-            <label style={{ display: "flex", flexDirection: "column", gap: 8 }}>
-              <span style={{ ...mono, fontSize: "0.58rem", color: "var(--color-faint)" }}>Hangi Memura Bağlansın?</span>
-              <select
-                value={linkOfficerId}
-                onChange={(e) => setLinkOfficerId(e.target.value)}
-                style={{ background: "var(--color-bg)", border: "1px solid var(--color-line)", color: "var(--color-txt)", padding: "10px 12px", fontFamily: "var(--font-mono)", fontSize: "0.75rem", outline: "none" }}
-              >
-                <option value="">— Memur seçin —</option>
-                {officers.map((o) => (
-                  <option key={o.id} value={o.id}>
-                    {o.name} ({o.badge_no}) — {o.rank}{o.discord_id ? (o.discord_id === linkingRequest.discord_id ? " ✓ Zaten bağlı" : " [Başka bağlantı var]") : ""}
-                  </option>
-                ))}
-              </select>
-            </label>
-            {linkOfficerId && officers.find(o => o.id === linkOfficerId)?.discord_id && officers.find(o => o.id === linkOfficerId)?.discord_id !== linkingRequest.discord_id && (
-              <div style={{ ...mono, fontSize: "0.58rem", color: "var(--color-warn)", marginTop: 8, padding: "8px 12px", border: "1px solid var(--color-warn)" }}>
-                Bu memur başka bir Discord hesabına bağlı. Devam ederseniz eski bağlantı silinir.
+      {linkingRequest && (() => {
+        const currentlyLinked = officers.find(o => o.discord_id === linkingRequest.discord_id)
+        const selectedOfficer = officers.find(o => o.id === linkOfficerId)
+        const selectedHasOtherLink = selectedOfficer?.discord_id && selectedOfficer.discord_id !== linkingRequest.discord_id
+        const unlinkedOfficers = officers.filter(o => !o.discord_id)
+        const otherLinkedOfficers = officers.filter(o => o.discord_id && o.discord_id !== linkingRequest.discord_id)
+        return (
+          <div style={{ position: "fixed", inset: 0, background: "oklch(0 0 0 / 0.75)", zIndex: 300, display: "flex", alignItems: "center", justifyContent: "center", padding: 24 }}>
+            <div style={{ background: "var(--color-bg-2)", border: "1px solid var(--color-line)", width: "100%", maxWidth: 520 }}>
+              {/* Header */}
+              <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", padding: "16px 24px", borderBottom: "1px solid var(--color-line)", background: "var(--color-bg-3)" }}>
+                <span style={{ ...mono, fontSize: "0.62rem", color: "var(--color-accent)" }}>
+                  {linkIsApproval ? "● Onayla ve Memura Bağla" : currentlyLinked ? "● Bağlantıyı Güncelle" : "● Memura Bağla"}
+                </span>
+                <button onClick={closeLinkModal} style={{ ...mono, fontSize: "0.58rem", color: "var(--color-faint)", border: "1px solid var(--color-line)", padding: "4px 10px", background: "transparent", cursor: "pointer" }}>✕</button>
               </div>
-            )}
-            {linkError && (
-              <div style={{ ...mono, fontSize: "0.58rem", color: "var(--color-warn)", marginTop: 8, padding: "8px 12px", border: "1px solid var(--color-warn)" }}>
-                {linkError}
+
+              <div style={{ padding: "20px 24px" }}>
+                {/* Discord user info */}
+                <div style={{ display: "flex", alignItems: "center", gap: 12, padding: "12px 14px", background: "var(--color-bg-3)", border: "1px solid var(--color-line)", marginBottom: 16 }}>
+                  {linkingRequest.discord_avatar ? (
+                    // eslint-disable-next-line @next/next/no-img-element
+                    <img src={linkingRequest.discord_avatar} alt="" className="rounded-full" style={{ width: 40, height: 40, flexShrink: 0 }} />
+                  ) : (
+                    <div className="rounded-full flex items-center justify-center" style={{ width: 40, height: 40, background: "#5865F2", ...mono, fontSize: "0.65rem", color: "#fff", flexShrink: 0 }}>
+                      {linkingRequest.discord_name?.[0]?.toUpperCase()}
+                    </div>
+                  )}
+                  <div style={{ minWidth: 0 }}>
+                    <div style={{ fontFamily: "var(--font-body)", fontSize: "0.95rem", fontWeight: 600, color: "var(--color-txt)" }}>{linkingRequest.discord_name}</div>
+                    <div style={{ ...mono, fontSize: "0.52rem", color: "var(--color-faint)", marginTop: 2 }}>ID: {linkingRequest.discord_id}</div>
+                  </div>
+                </div>
+
+                {/* Currently linked officer notice */}
+                {currentlyLinked && (
+                  <div style={{ display: "flex", alignItems: "center", gap: 8, padding: "10px 14px", background: "oklch(0.25 0.08 145 / 0.3)", border: "1px solid var(--color-status-on)", marginBottom: 16 }}>
+                    <span style={{ color: "var(--color-status-on)", fontSize: "0.8rem" }}>✓</span>
+                    <div>
+                      <span style={{ ...mono, fontSize: "0.55rem", color: "var(--color-status-on)" }}>Mevcut bağlantı: </span>
+                      <span style={{ ...mono, fontSize: "0.6rem", color: "var(--color-txt)", fontWeight: 700 }}>{currentlyLinked.name} ({currentlyLinked.badge_no})</span>
+                    </div>
+                  </div>
+                )}
+
+                {/* Officer select */}
+                <label style={{ display: "flex", flexDirection: "column", gap: 6 }}>
+                  <span style={{ ...mono, fontSize: "0.55rem", color: "var(--color-faint)" }}>Hangi Memura Bağlansın?</span>
+                  <select
+                    value={linkOfficerId}
+                    onChange={(e) => setLinkOfficerId(e.target.value)}
+                    style={{ background: "var(--color-bg)", border: "1px solid var(--color-line)", color: "var(--color-txt)", padding: "10px 12px", fontFamily: "var(--font-mono)", fontSize: "0.72rem", outline: "none", width: "100%" }}
+                  >
+                    <option value="">— Memur seçin —</option>
+                    {unlinkedOfficers.length > 0 && (
+                      <optgroup label="Bağlantısız Memurlar">
+                        {unlinkedOfficers.map(o => (
+                          <option key={o.id} value={o.id}>{o.name} ({o.badge_no}) — {o.rank}</option>
+                        ))}
+                      </optgroup>
+                    )}
+                    {currentlyLinked && (
+                      <optgroup label="Zaten Bu Hesaba Bağlı">
+                        <option value={currentlyLinked.id}>{currentlyLinked.name} ({currentlyLinked.badge_no}) — {currentlyLinked.rank} ✓</option>
+                      </optgroup>
+                    )}
+                    {otherLinkedOfficers.length > 0 && (
+                      <optgroup label="Başka Hesaba Bağlı (dikkat)">
+                        {otherLinkedOfficers.map(o => (
+                          <option key={o.id} value={o.id}>{o.name} ({o.badge_no}) — {o.rank}</option>
+                        ))}
+                      </optgroup>
+                    )}
+                  </select>
+                </label>
+
+                {/* Warnings */}
+                {selectedHasOtherLink && (
+                  <div style={{ ...mono, fontSize: "0.57rem", color: "var(--color-warn)", marginTop: 10, padding: "8px 12px", border: "1px solid var(--color-warn)", background: "oklch(0.2 0.08 30 / 0.3)" }}>
+                    ⚠ Bu memurun mevcut Discord bağlantısı silinecek.
+                  </div>
+                )}
+                {linkError && (
+                  <div style={{ ...mono, fontSize: "0.57rem", color: "var(--color-warn)", marginTop: 10, padding: "8px 12px", border: "1px solid var(--color-warn)", background: "oklch(0.2 0.08 30 / 0.3)" }}>
+                    ✕ {linkError}
+                  </div>
+                )}
+
+                {/* Actions */}
+                <div style={{ display: "flex", gap: 10, marginTop: 20 }}>
+                  <button
+                    onClick={linkToOfficer}
+                    disabled={!linkOfficerId || linking}
+                    style={{ ...mono, fontSize: "0.62rem", padding: "10px 22px", background: linkOfficerId && !linking ? "var(--color-status-on)" : "var(--color-bg-3)", color: linkOfficerId && !linking ? "#000" : "var(--color-faint)", border: "none", cursor: linkOfficerId ? "pointer" : "not-allowed", fontWeight: 700, flex: 1 }}
+                  >
+                    {linking ? "İşleniyor…" : linkIsApproval ? "Onayla ve Bağla" : "Bağla"}
+                  </button>
+                  <button
+                    onClick={closeLinkModal}
+                    style={{ ...mono, fontSize: "0.62rem", padding: "10px 18px", background: "transparent", color: "var(--color-faint)", border: "1px solid var(--color-line)", cursor: "pointer" }}
+                  >
+                    İptal
+                  </button>
+                </div>
               </div>
-            )}
-            <div className="flex gap-3 mt-6">
-              <button onClick={linkToOfficer} disabled={!linkOfficerId || linking} style={{ ...mono, fontSize: "0.65rem", padding: "10px 24px", background: linkOfficerId && !linking ? "var(--color-status-on)" : "var(--color-bg-3)", color: linkOfficerId && !linking ? "#000" : "var(--color-faint)", border: "none", cursor: linkOfficerId ? "pointer" : "not-allowed", fontWeight: 700 }}>
-                {linking ? "İşleniyor…" : linkIsApproval ? "Onayla ve Bağla" : "Bağla"}
-              </button>
-              <button onClick={closeLinkModal} style={{ ...mono, fontSize: "0.65rem", padding: "10px 24px", background: "transparent", color: "var(--color-faint)", border: "1px solid var(--color-line)", cursor: "pointer" }}>İptal</button>
             </div>
           </div>
-        </div>
-      )}
+        )
+      })()}
 
       {/* Edit Modal */}
       {editTarget && (
@@ -604,8 +665,11 @@ export default function AdminDashboard() {
                     )}
                     {r.status !== "pending" && (
                       <button onClick={async () => {
-                        await fetch("/api/access-request", { method: "DELETE", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ id: r.id }) })
-                        setAccessRequests(p => p.filter(x => x.id !== r.id))
+                        const res = await fetch("/api/access-request", { method: "DELETE", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ id: r.id }) })
+                        if (res.ok) {
+                          setOfficers(p => p.map(o => o.discord_id === r.discord_id ? { ...o, discord_id: null } : o))
+                          setAccessRequests(p => p.filter(x => x.id !== r.id))
+                        }
                       }} style={{ ...mono, fontSize: "0.55rem", padding: "5px 10px", background: "transparent", color: "var(--color-faint)", border: "1px solid var(--color-line)", cursor: "pointer" }}>Sil</button>
                     )}
                   </div>
