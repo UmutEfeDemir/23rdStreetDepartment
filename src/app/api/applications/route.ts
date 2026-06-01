@@ -3,9 +3,9 @@ import { type NextRequest } from "next/server"
 export async function POST(req: NextRequest) {
   try {
     const body = await req.json()
-    const { fullName, age, discord, characterName, unit, experience, motivation } = body
+    const { fullName, age, discord, characterName, characterAge, experience, motivation } = body
 
-    if (!fullName || !age || !discord || !characterName || !unit || !experience || !motivation) {
+    if (!fullName || !age || !discord || !characterName || !characterAge || !experience || !motivation) {
       return Response.json({ error: "Eksik alanlar" }, { status: 400 })
     }
     if (Number(age) < 18) {
@@ -21,7 +21,7 @@ export async function POST(req: NextRequest) {
           INSERT INTO applications
             (full_name, age, discord, character_name, unit, experience, motivation, accepted_rules, status)
           VALUES
-            (${fullName}, ${Number(age)}, ${discord}, ${characterName}, ${unit},
+            (${fullName}, ${Number(age)}, ${discord}, ${characterName}, ${String(characterAge)},
              ${experience}, ${motivation}, true, 'pending')
         `
       } catch (e) {
@@ -44,7 +44,7 @@ export async function POST(req: NextRequest) {
                 { name: "Yaş", value: String(age), inline: true },
                 { name: "Discord", value: discord, inline: true },
                 { name: "Karakter", value: characterName, inline: true },
-                { name: "Birim", value: unit, inline: true },
+                { name: "Karakter Yaşı", value: String(characterAge), inline: true },
                 { name: "RP Tecrübesi", value: experience.slice(0, 300) },
                 { name: "Motivasyon", value: motivation.slice(0, 300) },
               ],

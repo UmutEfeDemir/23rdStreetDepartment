@@ -26,14 +26,20 @@ interface DutyLog {
   duration_minutes: number | null
 }
 
-function StatBox({ label, value, mono }: { label: string; value: string | number; mono: string }) {
+function StatBox({ label, value }: { label: string; value: string | number }) {
   return (
     <div className="flex flex-col p-4" style={{ background: "var(--color-bg-3)", border: "1px solid var(--color-line)" }}>
-      <span style={{ fontFamily: "var(--font-mono)", fontSize: "0.55rem", letterSpacing: "0.2em", color: "var(--color-faint)", textTransform: "uppercase", marginBottom: 8 }}>{mono}</span>
+      <span style={{ fontFamily: "var(--font-mono)", fontSize: "0.55rem", letterSpacing: "0.2em", color: "var(--color-faint)", textTransform: "uppercase", marginBottom: 8 }}>{label}</span>
       <span style={{ fontFamily: "var(--font-display)", fontSize: "2rem", fontWeight: 700, color: "var(--color-accent)", lineHeight: 1 }}>{value}</span>
-      <span style={{ fontFamily: "var(--font-mono)", fontSize: "0.6rem", letterSpacing: "0.14em", color: "var(--color-muted)", textTransform: "uppercase", marginTop: 6 }}>{label}</span>
     </div>
   )
+}
+
+function formatDutyTime(totalSeconds: number) {
+  const h = Math.floor(totalSeconds / 3600)
+  const m = Math.floor((totalSeconds % 3600) / 60)
+  const s = totalSeconds % 60
+  return `${String(h).padStart(2, "0")}:${String(m).padStart(2, "0")}:${String(s).padStart(2, "0")}`
 }
 
 function LoginGate() {
@@ -211,7 +217,7 @@ export default function PersonnelPanel() {
             <div className="lg:col-span-2 flex flex-col gap-6">
               {officer && (
                 <div className="grid grid-cols-1 gap-3">
-                  <StatBox label="Görev Saati" value={officer.duty_hours} mono="GÖREV SAATİ" />
+                  <StatBox label="GÖREV SAATİ" value={formatDutyTime(officer.duty_hours)} />
                 </div>
               )}
 

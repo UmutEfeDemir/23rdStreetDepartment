@@ -4,6 +4,7 @@ import { useEffect, useState } from "react"
 import { useRouter } from "next/navigation"
 import { useSession, signIn, signOut } from "next-auth/react"
 import Image from "next/image"
+import Link from "next/link"
 
 type AppStatus = "pending" | "interview" | "accepted" | "rejected"
 type Tab = "applications" | "officers"
@@ -190,11 +191,16 @@ export default function AdminDashboard() {
 
       {/* Header */}
       <header style={{ background: "var(--color-bg-2)", borderBottom: "1px solid var(--color-line)", padding: "0 clamp(20px,4vw,48px)", height: 64, display: "flex", alignItems: "center", justifyContent: "space-between", position: "sticky", top: 0, zIndex: 50 }}>
-        <div className="flex items-center gap-3">
-          <Image src="/logo.png" alt="Logo" width={36} height={36} className="rounded-full" />
-          <div>
-            <span style={{ fontFamily: "var(--font-display)", fontSize: "0.9rem", fontWeight: 700, textTransform: "uppercase", letterSpacing: "0.06em", color: "var(--color-txt)" }}>Admin Paneli</span>
-            <span style={{ ...mono, fontSize: "0.55rem", color: "var(--color-accent)", marginLeft: 10 }}>23rd Street Dept.</span>
+        <div className="flex items-center gap-4">
+          <Link href="/" style={{ ...mono, fontSize: "0.58rem", color: "var(--color-faint)", border: "1px solid var(--color-line)", padding: "5px 12px", background: "transparent", textDecoration: "none", display: "flex", alignItems: "center", gap: 6 }}>
+            ← Ana Sayfa
+          </Link>
+          <div className="flex items-center gap-3">
+            <Image src="/logo.png" alt="Logo" width={36} height={36} className="rounded-full" />
+            <div>
+              <span style={{ fontFamily: "var(--font-display)", fontSize: "0.9rem", fontWeight: 700, textTransform: "uppercase", letterSpacing: "0.06em", color: "var(--color-txt)" }}>Admin Paneli</span>
+              <span style={{ ...mono, fontSize: "0.55rem", color: "var(--color-accent)", marginLeft: 10 }}>23rd Street Dept.</span>
+            </div>
           </div>
         </div>
 
@@ -254,7 +260,7 @@ export default function AdminDashboard() {
                 <div className="flex items-center justify-between gap-3">
                   <div>
                     <div style={{ fontFamily: "var(--font-body)", fontSize: "0.9rem", fontWeight: 600, color: "var(--color-txt)" }}>{app.full_name}</div>
-                    <div style={{ ...mono, fontSize: "0.58rem", color: "var(--color-faint)", marginTop: 2 }}>{app.discord} · {app.unit} · {app.age} yaş</div>
+                    <div style={{ ...mono, fontSize: "0.58rem", color: "var(--color-faint)", marginTop: 2 }}>{app.discord} · Karakter {app.unit} yaş · {app.age} yaş</div>
                   </div>
                   <span style={{ ...mono, fontSize: "0.55rem", color: STATUS_COLORS[app.status], border: `1px solid ${STATUS_COLORS[app.status]}`, padding: "3px 8px", whiteSpace: "nowrap" }}>{STATUS_LABELS[app.status]}</span>
                 </div>
@@ -267,9 +273,9 @@ export default function AdminDashboard() {
             <div style={{ flex: 1, overflowY: "auto", padding: "24px 28px" }}>
               <button onClick={() => setSelected(null)} style={{ ...mono, fontSize: "0.6rem", color: "var(--color-faint)", border: "1px solid var(--color-line)", padding: "6px 12px", background: "transparent", cursor: "pointer", marginBottom: 20 }}>← Kapat</button>
               <div style={{ fontFamily: "var(--font-display)", fontSize: "1.4rem", fontWeight: 700, textTransform: "uppercase", color: "var(--color-txt)", marginBottom: 4 }}>{selected.full_name}</div>
-              <div style={{ ...mono, fontSize: "0.62rem", color: "var(--color-accent)", marginBottom: 20 }}>{selected.character_name} · {selected.unit} · {selected.age} yaş</div>
+              <div style={{ ...mono, fontSize: "0.62rem", color: "var(--color-accent)", marginBottom: 20 }}>{selected.character_name} · Karakter Yaşı: {selected.unit} · {selected.age} yaş</div>
               <div className="grid grid-cols-2 gap-3 mb-6">
-                {[{ label: "Discord", value: selected.discord }, { label: "Birim Talebi", value: selected.unit }, { label: "Yaş", value: String(selected.age) }, { label: "Başvuru Tarihi", value: new Date(selected.created_at).toLocaleDateString("tr-TR") }].map((item) => (
+                {[{ label: "Discord", value: selected.discord }, { label: "Karakter Yaşı", value: selected.unit }, { label: "Oyuncu Yaşı", value: String(selected.age) }, { label: "Başvuru Tarihi", value: new Date(selected.created_at).toLocaleDateString("tr-TR") }].map((item) => (
                   <div key={item.label} style={{ background: "var(--color-bg-2)", border: "1px solid var(--color-line)", padding: "10px 14px" }}>
                     <div style={{ ...mono, fontSize: "0.55rem", color: "var(--color-faint)", marginBottom: 4 }}>{item.label}</div>
                     <div style={{ fontFamily: "var(--font-body)", fontSize: "0.9rem", color: "var(--color-txt)" }}>{item.value}</div>

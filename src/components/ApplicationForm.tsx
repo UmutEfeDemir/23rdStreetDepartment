@@ -4,15 +4,12 @@ import { useState } from "react"
 import { useForm } from "react-hook-form"
 import { zodResolver } from "@hookform/resolvers/zod"
 import { z } from "zod"
-import type { Unit } from "@/lib/types"
-import { UNIT_LABELS } from "@/lib/types"
-
 const schema = z.object({
   fullName: z.string().min(3, "En az 3 karakter"),
   age: z.number().min(18, "18 yaşından küçükler başvuramaz").max(80, "Geçersiz yaş"),
   discord: z.string().min(2, "Discord adı gerekli"),
   characterName: z.string().min(3, "Karakter adı gerekli"),
-  unit: z.enum(["HPD", "CID", "SWAT", "TFD", "K9", "ASD"] as const),
+  characterAge: z.number().min(18, "Karakter yaşı en az 18 olmalıdır").max(100, "Geçersiz karakter yaşı"),
   experience: z.string().min(20, "En az 20 karakter"),
   motivation: z.string().min(30, "En az 30 karakter"),
   acceptedRules: z.literal(true, "Kuralları kabul etmelisiniz"),
@@ -22,7 +19,7 @@ type FormData = z.infer<typeof schema>
 
 const STEPS = [
   "Kişisel Bilgiler",
-  "Karakter & Birim",
+  "Karakter",
   "Deneyim",
   "Gönder",
 ]
@@ -75,7 +72,7 @@ export default function ApplicationForm() {
 
   const STEP_FIELDS: Record<number, (keyof FormData)[]> = {
     0: ["fullName", "age", "discord"],
-    1: ["characterName", "unit"],
+    1: ["characterName", "characterAge"],
     2: ["experience", "motivation"],
     3: ["acceptedRules"],
   }
@@ -266,16 +263,16 @@ export default function ApplicationForm() {
                       {errors.characterName && <p style={errorStyle}>{errors.characterName.message}</p>}
                     </div>
                     <div>
-                      <label style={labelStyle}>Başvurmak İstediğiniz Birim</label>
-                      <select {...register("unit")} style={{ ...fieldStyle, cursor: "pointer" }}>
-                        <option value="">Birim seçin…</option>
-                        {(Object.keys(UNIT_LABELS) as Unit[]).map((u) => (
-                          <option key={u} value={u}>
-                            {u} — {UNIT_LABELS[u]}
-                          </option>
-                        ))}
-                      </select>
-                      {errors.unit && <p style={errorStyle}>{errors.unit.message}</p>}
+                      <label style={labelStyle}>Karakter Yaşı</label>
+                      <input
+                        type="number"
+                        {...register("characterAge", { valueAsNumber: true })}
+                        style={fieldStyle}
+                        placeholder="25"
+                        min={18}
+                        max={100}
+                      />
+                      {errors.characterAge && <p style={errorStyle}>{errors.characterAge.message}</p>}
                     </div>
                   </div>
                 )}

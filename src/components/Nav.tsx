@@ -42,7 +42,7 @@ export default function Nav() {
         style={{ paddingInline: "clamp(20px, 5vw, 64px)" }}
       >
         {/* Logo */}
-        <Link href="#" className="flex items-center gap-3 group">
+        <Link href="/admin" className="flex items-center gap-3 group">
           <Image
             src="/logo.png"
             alt="23rd Street Department"
