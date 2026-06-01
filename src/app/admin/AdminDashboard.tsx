@@ -124,6 +124,8 @@ export default function AdminDashboard() {
   const [linkingRequest, setLinkingRequest] = useState<AccessRequest | null>(null)
   const [linkOfficerId, setLinkOfficerId] = useState<string>("")
   const [linking, setLinking] = useState(false)
+  const [linkError, setLinkError] = useState<string>("")
+  const [linkIsApproval, setLinkIsApproval] = useState(false)
 
   const router = useRouter()
 
@@ -205,11 +207,41 @@ export default function AdminDashboard() {
 
   const isLinked = (discordId: string) => officers.some((o) => o.discord_id === discordId)
 
+  const openLinkModal = (r: AccessRequest, isApproval: boolean) => {
+    setLinkingRequest(r)
+    setLinkIsApproval(isApproval)
+    setLinkOfficerId("")
+    setLinkError("")
+  }
+
+  const closeLinkModal = () => {
+    setLinkingRequest(null)
+    setLinkOfficerId("")
+    setLinkError("")
+    setLinkIsApproval(false)
+  }
+
   const linkToOfficer = async () => {
     if (!linkingRequest || !linkOfficerId) return
     const officer = officers.find((o) => o.id === linkOfficerId)
     if (!officer) return
     setLinking(true)
+    setLinkError("")
+
+    if (linkIsApproval) {
+      const approveRes = await fetch("/api/access-request", {
+        method: "PATCH",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ id: linkingRequest.id, status: "approved" }),
+      })
+      if (!approveRes.ok) {
+        setLinkError("Onaylama başarısız oldu. Yönetici oturumunu kontrol edin.")
+        setLinking(false)
+        return
+      }
+      setAccessRequests((p) => p.map((x) => x.id === linkingRequest.id ? { ...x, status: "approved" } : x))
+    }
+
     const res = await fetch("/api/officers", {
       method: "PATCH",
       headers: { "Content-Type": "application/json" },
@@ -230,8 +262,10 @@ export default function AdminDashboard() {
     if (res.ok) {
       const updated = await res.json()
       setOfficers((p) => p.map((o) => (o.id === updated.id ? updated : o)))
-      setLinkingRequest(null)
-      setLinkOfficerId("")
+      closeLinkModal()
+    } else {
+      const errData = await res.json().catch(() => ({}))
+      setLinkError(errData.error ?? "Bağlama başarısız. Yönetici oturumunu kontrol edin ve tekrar deneyin.")
     }
     setLinking(false)
   }
@@ -244,15 +278,17 @@ export default function AdminDashboard() {
       {/* Link to Officer Modal */}
       {linkingRequest && (
         <div style={{ position: "fixed", inset: 0, background: "oklch(0 0 0 / 0.75)", zIndex: 300, display: "flex", alignItems: "center", justifyContent: "center", padding: 24 }}>
-          <div style={{ background: "var(--color-bg-2)", border: "1px solid var(--color-line)", padding: 32, width: "100%", maxWidth: 480 }}>
+          <div style={{ background: "var(--color-bg-2)", border: "1px solid var(--color-line)", padding: 32, width: "100%", maxWidth: 500 }}>
             <div className="flex justify-between items-center mb-6">
-              <span style={{ ...mono, fontSize: "0.65rem", color: "var(--color-accent)" }}>Memura Bağla</span>
-              <button onClick={() => { setLinkingRequest(null); setLinkOfficerId("") }} style={{ ...mono, fontSize: "0.6rem", color: "var(--color-faint)", border: "1px solid var(--color-line)", padding: "5px 12px", background: "transparent", cursor: "pointer" }}>✕ Kapat</button>
+              <span style={{ ...mono, fontSize: "0.65rem", color: "var(--color-accent)" }}>
+                {linkIsApproval ? "Onayla ve Memura Bağla" : isLinked(linkingRequest.discord_id) ? "Bağlantıyı Güncelle" : "Memura Bağla"}
+              </span>
+              <button onClick={closeLinkModal} style={{ ...mono, fontSize: "0.6rem", color: "var(--color-faint)", border: "1px solid var(--color-line)", padding: "5px 12px", background: "transparent", cursor: "pointer" }}>✕ Kapat</button>
             </div>
             <div style={{ background: "var(--color-bg-3)", border: "1px solid var(--color-line)", padding: "12px 16px", marginBottom: 20 }}>
               <div style={{ ...mono, fontSize: "0.55rem", color: "var(--color-faint)", marginBottom: 4 }}>Discord Kullanıcısı</div>
               <div style={{ fontFamily: "var(--font-body)", fontSize: "0.9rem", color: "var(--color-txt)", fontWeight: 600 }}>{linkingRequest.discord_name}</div>
-              <div style={{ ...mono, fontSize: "0.58rem", color: "var(--color-faint)", marginTop: 2 }}>{linkingRequest.discord_id}</div>
+              <div style={{ ...mono, fontSize: "0.58rem", color: "var(--color-faint)", marginTop: 2 }}>ID: {linkingRequest.discord_id}</div>
             </div>
             <label style={{ display: "flex", flexDirection: "column", gap: 8 }}>
               <span style={{ ...mono, fontSize: "0.58rem", color: "var(--color-faint)" }}>Hangi Memura Bağlansın?</span>
@@ -262,19 +298,28 @@ export default function AdminDashboard() {
                 style={{ background: "var(--color-bg)", border: "1px solid var(--color-line)", color: "var(--color-txt)", padding: "10px 12px", fontFamily: "var(--font-mono)", fontSize: "0.75rem", outline: "none" }}
               >
                 <option value="">— Memur seçin —</option>
-                {officers.filter((o) => !o.discord_id).map((o) => (
-                  <option key={o.id} value={o.id}>{o.name} ({o.badge_no}) — {o.rank}</option>
+                {officers.map((o) => (
+                  <option key={o.id} value={o.id}>
+                    {o.name} ({o.badge_no}) — {o.rank}{o.discord_id ? (o.discord_id === linkingRequest.discord_id ? " ✓ Zaten bağlı" : " [Başka bağlantı var]") : ""}
+                  </option>
                 ))}
               </select>
             </label>
-            {officers.filter((o) => !o.discord_id).length === 0 && (
-              <div style={{ ...mono, fontSize: "0.6rem", color: "var(--color-warn)", marginTop: 10 }}>Tüm memurlar zaten Discord'a bağlı. Önce Personel sekmesinden bağlantısız memur ekleyin.</div>
+            {linkOfficerId && officers.find(o => o.id === linkOfficerId)?.discord_id && officers.find(o => o.id === linkOfficerId)?.discord_id !== linkingRequest.discord_id && (
+              <div style={{ ...mono, fontSize: "0.58rem", color: "var(--color-warn)", marginTop: 8, padding: "8px 12px", border: "1px solid var(--color-warn)" }}>
+                Bu memur başka bir Discord hesabına bağlı. Devam ederseniz eski bağlantı silinir.
+              </div>
+            )}
+            {linkError && (
+              <div style={{ ...mono, fontSize: "0.58rem", color: "var(--color-warn)", marginTop: 8, padding: "8px 12px", border: "1px solid var(--color-warn)" }}>
+                {linkError}
+              </div>
             )}
             <div className="flex gap-3 mt-6">
-              <button onClick={linkToOfficer} disabled={!linkOfficerId || linking} style={{ ...mono, fontSize: "0.65rem", padding: "10px 24px", background: linkOfficerId ? "var(--color-status-on)" : "var(--color-bg-3)", color: linkOfficerId ? "#000" : "var(--color-faint)", border: "none", cursor: linkOfficerId ? "pointer" : "not-allowed", fontWeight: 700 }}>
-                {linking ? "Bağlanıyor…" : "Bağla"}
+              <button onClick={linkToOfficer} disabled={!linkOfficerId || linking} style={{ ...mono, fontSize: "0.65rem", padding: "10px 24px", background: linkOfficerId && !linking ? "var(--color-status-on)" : "var(--color-bg-3)", color: linkOfficerId && !linking ? "#000" : "var(--color-faint)", border: "none", cursor: linkOfficerId ? "pointer" : "not-allowed", fontWeight: 700 }}>
+                {linking ? "İşleniyor…" : linkIsApproval ? "Onayla ve Bağla" : "Bağla"}
               </button>
-              <button onClick={() => { setLinkingRequest(null); setLinkOfficerId("") }} style={{ ...mono, fontSize: "0.65rem", padding: "10px 24px", background: "transparent", color: "var(--color-faint)", border: "1px solid var(--color-line)", cursor: "pointer" }}>İptal</button>
+              <button onClick={closeLinkModal} style={{ ...mono, fontSize: "0.65rem", padding: "10px 24px", background: "transparent", color: "var(--color-faint)", border: "1px solid var(--color-line)", cursor: "pointer" }}>İptal</button>
             </div>
           </div>
         </div>
@@ -545,18 +590,17 @@ export default function AdminDashboard() {
                   <div className="flex gap-2 flex-wrap">
                     {r.status === "pending" && (
                       <>
-                        <button onClick={async () => {
-                          await fetch("/api/access-request", { method: "PATCH", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ id: r.id, status: "approved" }) })
-                          setAccessRequests(p => p.map(x => x.id === r.id ? { ...x, status: "approved" } : x))
-                        }} style={{ ...mono, fontSize: "0.55rem", padding: "5px 10px", background: "var(--color-status-on)", color: "#000", border: "none", cursor: "pointer", fontWeight: 700 }}>Onayla</button>
+                        <button onClick={() => openLinkModal(r, true)} style={{ ...mono, fontSize: "0.55rem", padding: "5px 10px", background: "var(--color-status-on)", color: "#000", border: "none", cursor: "pointer", fontWeight: 700 }}>Onayla</button>
                         <button onClick={async () => {
                           await fetch("/api/access-request", { method: "PATCH", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ id: r.id, status: "rejected" }) })
                           setAccessRequests(p => p.map(x => x.id === r.id ? { ...x, status: "rejected" } : x))
                         }} style={{ ...mono, fontSize: "0.55rem", padding: "5px 10px", background: "transparent", color: "var(--color-warn)", border: "1px solid var(--color-warn)", cursor: "pointer" }}>Reddet</button>
                       </>
                     )}
-                    {r.status === "approved" && !isLinked(r.discord_id) && (
-                      <button onClick={() => setLinkingRequest(r)} style={{ ...mono, fontSize: "0.55rem", padding: "5px 10px", background: "var(--color-accent)", color: "var(--color-accent-ink)", border: "none", cursor: "pointer", fontWeight: 700 }}>Memura Bağla</button>
+                    {r.status === "approved" && (
+                      <button onClick={() => openLinkModal(r, false)} style={{ ...mono, fontSize: "0.55rem", padding: "5px 10px", background: isLinked(r.discord_id) ? "transparent" : "var(--color-accent)", color: isLinked(r.discord_id) ? "var(--color-accent)" : "var(--color-accent-ink)", border: isLinked(r.discord_id) ? "1px solid var(--color-accent)" : "none", cursor: "pointer", fontWeight: 700 }}>
+                        {isLinked(r.discord_id) ? "Yeniden Bağla" : "Memura Bağla"}
+                      </button>
                     )}
                     {r.status !== "pending" && (
                       <button onClick={async () => {
