@@ -107,18 +107,26 @@ export async function DELETE(req: NextRequest) {
     return Response.json({ error: "Yetkisiz" }, { status: 403 })
   }
 
-  const { id, permanent } = await req.json()
-  if (!id) return Response.json({ error: "ID gerekli" }, { status: 400 })
+  const body = await req.json()
+  const { id, permanent, cleanup } = body
 
   if (process.env.DATABASE_URL) {
     try {
       const { getDb } = await import("@/lib/db")
       const sql = getDb()
+      // Bulk cleanup: hard-delete archive entries older than 15 days
+      if (cleanup) {
+        const result = await sql`
+          DELETE FROM applications
+          WHERE deleted_at IS NOT NULL AND deleted_at < NOW() - INTERVAL '15 days'
+          RETURNING id
+        `
+        return Response.json({ deleted: result.length })
+      }
+      if (!id) return Response.json({ error: "ID gerekli" }, { status: 400 })
       if (permanent) {
-        // Hard delete from archive
         await sql`DELETE FROM applications WHERE id = ${id}`
       } else {
-        // Soft delete — move to archive
         await sql`UPDATE applications SET deleted_at = NOW() WHERE id = ${id}`
       }
       return Response.json({ success: true })

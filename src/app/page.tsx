@@ -3,6 +3,7 @@ import { getDiscordRoleMemberCount } from "@/lib/discord"
 import { getDb } from "@/lib/db"
 import IntroAnimation from "@/components/IntroAnimation"
 import StatusRibbon from "@/components/StatusRibbon"
+import AnnouncementBanner from "@/components/AnnouncementBanner"
 import Nav from "@/components/Nav"
 import Hero from "@/components/Hero"
 import Stats from "@/components/Stats"
@@ -64,6 +65,7 @@ export default async function Home() {
     <div style={{ position: "relative", zIndex: 1 }}>
       <IntroAnimation />
       <StatusRibbon />
+      <AnnouncementBanner />
       <Nav />
       <main>
         <Hero />

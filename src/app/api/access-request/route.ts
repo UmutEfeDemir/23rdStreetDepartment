@@ -31,10 +31,14 @@ export async function GET() {
 
 export async function PATCH(req: NextRequest) {
   if (!(await isAtLeastModerator())) return Response.json({ error: "Yetkisiz" }, { status: 403 })
-  const { id, status } = await req.json()
-  if (!id || !status) return Response.json({ error: "Eksik alan" }, { status: 400 })
+  const { id, status, admin_notes, user_permissions } = await req.json()
+  if (!id) return Response.json({ error: "Eksik alan" }, { status: 400 })
   const sql = getDb()
-  await sql`UPDATE access_requests SET status = ${status} WHERE id = ${id}`
+  if (status) await sql`UPDATE access_requests SET status = ${status} WHERE id = ${id}`
+  if (typeof admin_notes === "string") await sql`UPDATE access_requests SET admin_notes = ${admin_notes} WHERE id = ${id}`
+  if (user_permissions !== undefined) {
+    await sql`UPDATE access_requests SET user_permissions = ${JSON.stringify(user_permissions)}::jsonb WHERE id = ${id}`
+  }
   return Response.json({ success: true })
 }
 

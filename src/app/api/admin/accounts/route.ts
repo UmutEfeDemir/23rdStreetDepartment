@@ -1,5 +1,5 @@
 import { type NextRequest } from "next/server"
-import { isFounder } from "@/lib/adminAuth"
+import { isFounder, canDo } from "@/lib/adminAuth"
 import { getDb } from "@/lib/db"
 import crypto from "crypto"
 
@@ -13,7 +13,7 @@ export async function GET() {
   if (!(await isFounder())) return Response.json({ error: "Yetkisiz" }, { status: 403 })
   const sql = getDb()
   const rows = await sql`
-    SELECT id, username, role, created_by, created_at, is_active
+    SELECT id, username, role, created_by, created_at, is_active, permissions
     FROM admin_accounts
     ORDER BY created_at ASC
   `
@@ -21,17 +21,22 @@ export async function GET() {
 }
 
 export async function POST(req: NextRequest) {
-  if (!(await isFounder())) return Response.json({ error: "Yetkisiz" }, { status: 403 })
+  const founderUser = await isFounder()
+  if (!founderUser && !(await canDo("accounts"))) return Response.json({ error: "Yetkisiz" }, { status: 403 })
   const { username, password, role } = await req.json()
   if (!username?.trim() || !password || !["moderator", "interview"].includes(role)) {
     return Response.json({ error: "Geçersiz veri" }, { status: 400 })
+  }
+  // Non-founders can only create interview-level accounts
+  if (!founderUser && role !== "interview") {
+    return Response.json({ error: "Yalnızca mülakat seviyesinde hesap oluşturabilirsiniz" }, { status: 403 })
   }
   const sql = getDb()
   try {
     const rows = await sql`
       INSERT INTO admin_accounts (username, password_hash, role)
       VALUES (${username.trim()}, ${hashPassword(password)}, ${role})
-      RETURNING id, username, role, created_by, created_at, is_active
+      RETURNING id, username, role, created_by, created_at, is_active, permissions
     `
     return Response.json(rows[0])
   } catch (e: unknown) {
@@ -43,7 +48,7 @@ export async function POST(req: NextRequest) {
 
 export async function PATCH(req: NextRequest) {
   if (!(await isFounder())) return Response.json({ error: "Yetkisiz" }, { status: 403 })
-  const { id, is_active, role, password } = await req.json()
+  const { id, is_active, role, password, permissions } = await req.json()
   if (!id) return Response.json({ error: "ID gerekli" }, { status: 400 })
   const sql = getDb()
   if (typeof password === "string" && password.length >= 6) {
@@ -55,8 +60,11 @@ export async function PATCH(req: NextRequest) {
   if (role && ["moderator", "interview"].includes(role)) {
     await sql`UPDATE admin_accounts SET role = ${role} WHERE id = ${id}`
   }
+  if (permissions !== undefined) {
+    await sql`UPDATE admin_accounts SET permissions = ${JSON.stringify(permissions)}::jsonb WHERE id = ${id}`
+  }
   const rows = await sql`
-    SELECT id, username, role, created_by, created_at, is_active
+    SELECT id, username, role, created_by, created_at, is_active, permissions
     FROM admin_accounts WHERE id = ${id} LIMIT 1
   `
   return Response.json(rows[0])

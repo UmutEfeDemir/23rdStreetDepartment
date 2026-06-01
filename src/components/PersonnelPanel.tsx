@@ -138,6 +138,8 @@ function CharacterAvatar({ name, discordImage }: { name: string; discordImage?: 
   )
 }
 
+const DEFAULT_PERMS = { duty: true, stats: true, logs: true, badges: true }
+
 export default function PersonnelPanel() {
   const { data: session, status } = useSession()
   const [officer, setOfficer] = useState<OfficerRow | null>(null)
@@ -148,6 +150,7 @@ export default function PersonnelPanel() {
   const [dutyLoading, setDutyLoading] = useState(false)
   const [requestStatus, setRequestStatus] = useState<"idle" | "sending" | "sent" | "exists">("idle")
   const [accessStatus, setAccessStatus] = useState<string | null>(null)
+  const [userPermissions, setUserPermissions] = useState<Record<string, boolean>>(DEFAULT_PERMS)
 
   const fetchDuty = useCallback(async () => {
     setLoading(true)
@@ -159,6 +162,7 @@ export default function PersonnelPanel() {
       setLogs(data.logs ?? [])
       setLicenses(data.licenses ?? [])
       setAccessStatus(data.accessStatus ?? null)
+      if (data.userPermissions) setUserPermissions({ ...DEFAULT_PERMS, ...data.userPermissions })
     }
     setLoading(false)
   }, [])
@@ -248,21 +252,29 @@ export default function PersonnelPanel() {
                   )}
 
                   {/* Mesai butonu */}
-                  <div style={{ borderTop: "1px solid var(--color-line)", paddingTop: 16 }}>
-                    {activeDuty ? (
-                      <div className="flex flex-col items-center gap-3">
-                        <div style={{ ...mono, fontSize: "0.58rem", color: "var(--color-status-on)" }}>● Mesai Aktif</div>
-                        <ElapsedTimer clockIn={activeDuty.clock_in} />
-                        <button onClick={clockOut} disabled={dutyLoading} style={{ ...mono, fontSize: "0.65rem", padding: "10px 24px", background: "var(--color-warn)", color: "var(--color-accent-ink)", border: "none", cursor: "pointer", fontWeight: 700, width: "100%" }}>
-                          {dutyLoading ? "…" : "Mesaiden Çık"}
+                  {userPermissions.duty ? (
+                    <div style={{ borderTop: "1px solid var(--color-line)", paddingTop: 16 }}>
+                      {activeDuty ? (
+                        <div className="flex flex-col items-center gap-3">
+                          <div style={{ ...mono, fontSize: "0.58rem", color: "var(--color-status-on)" }}>● Mesai Aktif</div>
+                          <ElapsedTimer clockIn={activeDuty.clock_in} />
+                          <button onClick={clockOut} disabled={dutyLoading} style={{ ...mono, fontSize: "0.65rem", padding: "10px 24px", background: "var(--color-warn)", color: "var(--color-accent-ink)", border: "none", cursor: "pointer", fontWeight: 700, width: "100%" }}>
+                            {dutyLoading ? "…" : "Mesaiden Çık"}
+                          </button>
+                        </div>
+                      ) : (
+                        <button onClick={clockIn} disabled={dutyLoading} style={{ ...mono, fontSize: "0.65rem", padding: "10px 24px", background: "var(--color-status-on)", color: "#000", border: "none", cursor: "pointer", fontWeight: 700, width: "100%" }}>
+                          {dutyLoading ? "…" : "Mesaiye Gir"}
                         </button>
+                      )}
+                    </div>
+                  ) : (
+                    <div style={{ borderTop: "1px solid var(--color-line)", paddingTop: 16 }}>
+                      <div style={{ ...mono, fontSize: "0.6rem", color: "var(--color-faint)", textAlign: "center", padding: "10px", border: "1px solid var(--color-line)" }}>
+                        Mesai izniniz yok
                       </div>
-                    ) : (
-                      <button onClick={clockIn} disabled={dutyLoading} style={{ ...mono, fontSize: "0.65rem", padding: "10px 24px", background: "var(--color-status-on)", color: "#000", border: "none", cursor: "pointer", fontWeight: 700, width: "100%" }}>
-                        {dutyLoading ? "…" : "Mesaiye Gir"}
-                      </button>
-                    )}
-                  </div>
+                    </div>
+                  )}
                 </>
               ) : (
                 <div className="py-4 flex flex-col gap-3">
@@ -307,8 +319,7 @@ export default function PersonnelPanel() {
 
             {/* Right side */}
             <div className="lg:col-span-2 flex flex-col gap-6">
-              {officer && (() => {
-                // 30 min = 1800 seconds (duration_minutes column actually stores seconds)
+              {officer && userPermissions.stats && (() => {
                 const validLogs = logs.filter(l => l.duration_minutes != null && l.duration_minutes >= 1800)
                 return (
                   <div className="grid grid-cols-3 gap-3">
@@ -320,7 +331,7 @@ export default function PersonnelPanel() {
               })()}
 
               {/* Badges by category */}
-              {officer && licenses.length > 0 && (() => {
+              {officer && userPermissions.badges && licenses.length > 0 && (() => {
                 const grouped = licenses.reduce<Record<string, Badge[]>>((acc, b) => {
                   const cat = b.category || "license"
                   if (!acc[cat]) acc[cat] = []
@@ -370,6 +381,7 @@ export default function PersonnelPanel() {
               })()}
 
               {/* Duty log */}
+              {officer && !userPermissions.logs ? null : (
               <div style={{ background: "var(--color-bg-3)", border: "1px solid var(--color-line)" }}>
                 <div className="px-5 py-3" style={{ borderBottom: "1px solid var(--color-line)", display: "flex", justifyContent: "space-between", alignItems: "center" }}>
                   <span style={{ ...mono, fontSize: "0.62rem", color: "var(--color-faint)" }}>Mesai Geçmişi</span>
@@ -399,6 +411,7 @@ export default function PersonnelPanel() {
                   </div>
                 )}
               </div>
+              )}
             </div>
           </div>
         )}

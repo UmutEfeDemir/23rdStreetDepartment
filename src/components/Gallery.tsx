@@ -1,29 +1,29 @@
 "use client"
 
 import Image from "next/image"
-import { useState } from "react"
+import { useState, useEffect } from "react"
 
-const PHOTOS = [
-  "/gallery/g01.png",
-  "/gallery/g02.png",
-  "/gallery/g03.png",
-  "/gallery/g04.png",
-  "/gallery/g05.png",
-  "/gallery/g06.png",
-  "/gallery/g07.png",
-  "/gallery/g08.png",
-  "/gallery/g09.png",
-  "/gallery/g10.png",
-  "/gallery/g11.png",
-  "/gallery/g12.png",
-  "/gallery/g13.png",
-  "/gallery/g14.png",
-  "/gallery/g15.png",
-  "/gallery/g16.png",
+const FALLBACK_photos = [
+  "/gallery/g01.png", "/gallery/g02.png", "/gallery/g03.png", "/gallery/g04.png",
+  "/gallery/g05.png", "/gallery/g06.png", "/gallery/g07.png", "/gallery/g08.png",
+  "/gallery/g09.png", "/gallery/g10.png", "/gallery/g11.png", "/gallery/g12.png",
+  "/gallery/g13.png", "/gallery/g14.png", "/gallery/g15.png", "/gallery/g16.png",
 ]
 
 export default function Gallery() {
+  const [photos, setPhotos] = useState<string[]>(FALLBACK_photos)
   const [lightbox, setLightbox] = useState<number | null>(null)
+
+  useEffect(() => {
+    fetch("/api/gallery-images")
+      .then((r) => r.ok ? r.json() : [])
+      .then((d) => {
+        if (Array.isArray(d) && d.length > 0) {
+          setPhotos(d.map((img: { url: string }) => img.url))
+        }
+      })
+      .catch(() => {})
+  }, [])
 
   return (
     <section
@@ -40,14 +40,14 @@ export default function Gallery() {
         >
           <button
             style={{ position: "absolute", left: 24, top: "50%", transform: "translateY(-50%)", background: "transparent", border: "1px solid var(--color-line)", color: "var(--color-txt)", padding: "12px 18px", cursor: "pointer", fontSize: "1.2rem", zIndex: 10 }}
-            onClick={(e) => { e.stopPropagation(); setLightbox((p) => p! > 0 ? p! - 1 : PHOTOS.length - 1) }}
+            onClick={(e) => { e.stopPropagation(); setLightbox((p) => p! > 0 ? p! - 1 : photos.length - 1) }}
           >‹</button>
           <div
             style={{ position: "relative", width: "min(90vw, 1200px)", aspectRatio: "16/9" }}
             onClick={(e) => e.stopPropagation()}
           >
             <Image
-              src={PHOTOS[lightbox]}
+              src={photos[lightbox]}
               alt={`Saha görüntüsü ${lightbox + 1}`}
               fill
               style={{ objectFit: "contain" }}
@@ -57,14 +57,14 @@ export default function Gallery() {
           </div>
           <button
             style={{ position: "absolute", right: 24, top: "50%", transform: "translateY(-50%)", background: "transparent", border: "1px solid var(--color-line)", color: "var(--color-txt)", padding: "12px 18px", cursor: "pointer", fontSize: "1.2rem", zIndex: 10 }}
-            onClick={(e) => { e.stopPropagation(); setLightbox((p) => p! < PHOTOS.length - 1 ? p! + 1 : 0) }}
+            onClick={(e) => { e.stopPropagation(); setLightbox((p) => p! < photos.length - 1 ? p! + 1 : 0) }}
           >›</button>
           <button
             style={{ position: "absolute", top: 20, right: 20, background: "transparent", border: "1px solid var(--color-line)", color: "var(--color-txt)", padding: "8px 14px", cursor: "pointer", fontFamily: "var(--font-mono)", fontSize: "0.7rem" }}
             onClick={(e) => { e.stopPropagation(); setLightbox(null) }}
           >✕ Kapat</button>
           <div style={{ position: "absolute", bottom: 20, left: "50%", transform: "translateX(-50%)", fontFamily: "var(--font-mono)", fontSize: "0.6rem", color: "var(--color-faint)", letterSpacing: "0.14em" }}>
-            {lightbox + 1} / {PHOTOS.length}
+            {lightbox + 1} / {photos.length}
           </div>
         </div>
       )}
@@ -91,7 +91,7 @@ export default function Gallery() {
             gap: 6,
           }}
         >
-          {PHOTOS.map((src, i) => (
+          {photos.map((src, i) => (
             <div
               key={i}
               className="gallery-item relative cursor-pointer group"

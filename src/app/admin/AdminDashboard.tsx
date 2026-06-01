@@ -7,7 +7,7 @@ import Image from "next/image"
 import Link from "next/link"
 
 type AppStatus = "pending" | "interview" | "accepted" | "rejected"
-type Tab = "applications" | "officers" | "access" | "badges" | "announcements" | "ribbon" | "rules" | "accounts" | "archive"
+type Tab = "applications" | "officers" | "access" | "badges" | "announcements" | "ribbon" | "gallery" | "rules" | "accounts" | "archive"
 type AdminRole = "founder" | "moderator" | "interview"
 
 interface AccessRequest {
@@ -17,6 +17,8 @@ interface AccessRequest {
   discord_avatar: string
   status: string
   created_at: string
+  admin_notes?: string
+  user_permissions?: Record<string, boolean>
 }
 
 interface Application {
@@ -83,7 +85,7 @@ const UNITS = ["High Command", "Sup. Command", "Supervisor", "Polis"]
 const RANKS = ["Captain", "Senior Lieutenant", "Lieutenant", "Senior Sergeant", "Sergeant", "Corporal", "Master Trooper", "Senior Trooper", "Trooper", "Cadet"]
 const STATUSES = ["Görevde", "Aktif", "İzinli", "Eğitimde"]
 
-const emptyForm = { discord_id: "", badge_no: "", name: "", rank: "Officer", unit: "HPD", status: "Aktif", seniority_months: 0, rank_progress: 0, next_rank: "", is_command: false }
+const emptyForm = { discord_id: "", discord_avatar: "", badge_no: "", name: "", rank: "Officer", unit: "HPD", status: "Aktif", seniority_months: 0, rank_progress: 0, next_rank: "", is_command: false }
 type OfficerForm = typeof emptyForm
 
 const mono: React.CSSProperties = { fontFamily: "var(--font-mono)", letterSpacing: "0.12em", textTransform: "uppercase" as const }
@@ -95,6 +97,7 @@ function OfficerFormFields({ form, setForm }: { form: OfficerForm; setForm: (f: 
         { key: "badge_no", label: "Rozet No", placeholder: "#101" },
         { key: "name", label: "İsim Soyisim", placeholder: "John Doe" },
         { key: "discord_id", label: "Discord ID", placeholder: "123456789012345678" },
+        { key: "discord_avatar", label: "Discord Avatar URL", placeholder: "https://cdn.discordapp.com/avatars/…" },
         { key: "seniority_months", label: "Kıdem (ay)", placeholder: "0", type: "number" },
         { key: "rank_progress", label: "Rütbe İlerlemesi (%)", placeholder: "0", type: "number" },
         { key: "next_rank", label: "Sonraki Rütbe", placeholder: "Opsiyonel" },
@@ -126,6 +129,26 @@ function OfficerFormFields({ form, setForm }: { form: OfficerForm; setForm: (f: 
         <input type="checkbox" checked={form.is_command} onChange={(e) => setForm({ ...form, is_command: e.target.checked })} />
         <span style={{ ...mono, fontSize: "0.6rem", color: "var(--color-muted)" }}>Komuta Kademesi</span>
       </label>
+    </div>
+  )
+}
+
+function NoteInput({ initialValue, onSave }: { initialValue: string; onSave: (val: string) => void }) {
+  const [value, setValue] = useState(initialValue)
+  const [saved, setSaved] = useState(false)
+  const save = () => { onSave(value); setSaved(true); setTimeout(() => setSaved(false), 1500) }
+  return (
+    <div className="flex items-center gap-2" style={{ flex: 1 }}>
+      <input
+        value={value}
+        onChange={(e) => { setValue(e.target.value); setSaved(false) }}
+        onKeyDown={(e) => e.key === "Enter" && save()}
+        placeholder="Admin notu ekle…"
+        style={{ flex: 1, background: "var(--color-bg)", border: "1px solid var(--color-line)", color: "var(--color-txt)", padding: "5px 10px", fontFamily: "var(--font-mono)", fontSize: "0.65rem", outline: "none" }}
+      />
+      <button onClick={save} style={{ fontFamily: "var(--font-mono)", fontSize: "0.55rem", letterSpacing: "0.1em", textTransform: "uppercase", padding: "5px 12px", background: "transparent", border: "1px solid var(--color-line)", color: saved ? "var(--color-status-on)" : "var(--color-faint)", cursor: "pointer" }}>
+        {saved ? "✓" : "Kaydet"}
+      </button>
     </div>
   )
 }
@@ -177,6 +200,12 @@ export default function AdminDashboard() {
   const [newRibbonType, setNewRibbonType] = useState<"normal" | "alert">("normal")
   const [ribbonSaving, setRibbonSaving] = useState(false)
 
+  interface GalleryImage { id: number; url: string; caption: string | null; order_num: number; created_at: string }
+  const [galleryImages, setGalleryImages] = useState<GalleryImage[]>([])
+  const [newGalleryUrl, setNewGalleryUrl] = useState("")
+  const [newGalleryCaption, setNewGalleryCaption] = useState("")
+  const [gallerySaving, setGallerySaving] = useState(false)
+
   interface ArchivedApp {
     id: string; full_name: string; discord: string; status: string; deleted_at: string; created_at: string
   }
@@ -199,6 +228,7 @@ export default function AdminDashboard() {
     created_by: string
     created_at: string
     is_active: boolean
+    permissions: Record<string, boolean>
   }
   const [accounts, setAccounts] = useState<AdminAccount[]>([])
   const [newAccUsername, setNewAccUsername] = useState("")
@@ -247,6 +277,10 @@ export default function AdminDashboard() {
     fetch("/api/ribbon-messages")
       .then((r) => r.ok ? r.json() : [])
       .then((d) => { setRibbonMessages(Array.isArray(d) ? d : []) })
+      .catch(() => {})
+    fetch("/api/gallery-images")
+      .then((r) => r.ok ? r.json() : [])
+      .then((d) => { setGalleryImages(Array.isArray(d) ? d : []) })
       .catch(() => {})
     fetch("/api/admin/accounts")
       .then((r) => r.ok ? r.json() : [])
@@ -299,7 +333,7 @@ export default function AdminDashboard() {
 
   const openEdit = async (o: OfficerRow) => {
     const validUnit = UNITS.includes(o.unit) ? o.unit : UNITS[0]
-    setEditForm({ discord_id: o.discord_id ?? "", badge_no: o.badge_no, name: o.name, rank: o.rank, unit: validUnit, status: o.status, seniority_months: o.seniority_months, rank_progress: o.rank_progress, next_rank: o.next_rank ?? "", is_command: o.is_command })
+    setEditForm({ discord_id: o.discord_id ?? "", discord_avatar: o.discord_avatar ?? "", badge_no: o.badge_no, name: o.name, rank: o.rank, unit: validUnit, status: o.status, seniority_months: o.seniority_months, rank_progress: o.rank_progress, next_rank: o.next_rank ?? "", is_command: o.is_command })
     setEditLicenses([])
     setEditTarget(o)
     const res = await fetch(`/api/licenses?officer_id=${o.id}`)
@@ -435,6 +469,31 @@ export default function AdminDashboard() {
     if (!confirm(`"${username}" hesabını silmek istediğinizden emin misiniz?`)) return
     await fetch("/api/admin/accounts", { method: "DELETE", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ id }) })
     setAccounts(p => p.filter(a => a.id !== id))
+  }
+
+  const savePermissions = async (id: string, permissions: Record<string, boolean>) => {
+    const res = await fetch("/api/admin/accounts", { method: "PATCH", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ id, permissions }) })
+    if (res.ok) { const updated = await res.json(); setAccounts(p => p.map(a => a.id === id ? updated : a)) }
+  }
+
+  const saveAccessNote = async (id: string, notes: string) => {
+    await fetch("/api/access-request", { method: "PATCH", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ id, admin_notes: notes }) })
+    setAccessRequests(p => p.map(r => r.id === id ? { ...r, admin_notes: notes } : r))
+  }
+
+  const saveUserPermissions = async (id: string, user_permissions: Record<string, boolean>) => {
+    await fetch("/api/access-request", { method: "PATCH", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ id, user_permissions }) })
+    setAccessRequests(p => p.map(r => r.id === id ? { ...r, user_permissions } : r))
+  }
+
+  const cleanupArchive = async () => {
+    if (!confirm("15 günden eski tüm arşiv kayıtları kalıcı olarak silinecek. Devam?")) return
+    const res = await fetch("/api/admin/applications", { method: "DELETE", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ cleanup: true }) })
+    if (res.ok) {
+      const d = await res.json()
+      alert(`${d.deleted ?? 0} kayıt silindi.`)
+      await loadArchive()
+    }
   }
 
   const resetDutyHours = async (officerId: string, officerName: string) => {
@@ -777,15 +836,15 @@ export default function AdminDashboard() {
 
       {/* Tabs — filtered by role */}
       <div style={{ background: "var(--color-bg-2)", borderBottom: "1px solid var(--color-line)", padding: "0 clamp(20px,4vw,48px)", display: "flex", gap: 4, overflowX: "auto" }}>
-        {(["applications", "officers", "access", "badges", "announcements", "ribbon", "archive", "rules", "accounts"] as Tab[])
+        {(["applications", "officers", "access", "badges", "announcements", "ribbon", "gallery", "archive", "rules", "accounts"] as Tab[])
           .filter((t) => {
             if (adminRole === "interview") return t === "applications"
-            if (adminRole === "moderator") return ["applications", "access", "badges", "announcements", "ribbon", "archive", "rules"].includes(t)
+            if (adminRole === "moderator") return ["applications", "access", "badges", "announcements", "ribbon", "gallery", "archive", "rules"].includes(t)
             return true // founder sees all
           })
           .map((t) => (
             <button key={t} onClick={() => { setTab(t); if (t === "archive") loadArchive() }} style={{ ...mono, fontSize: "0.62rem", padding: "14px 20px", background: "transparent", border: "none", borderBottom: tab === t ? "2px solid var(--color-accent)" : "2px solid transparent", color: tab === t ? "var(--color-accent)" : "var(--color-faint)", cursor: "pointer", whiteSpace: "nowrap", flexShrink: 0 }}>
-              {t === "applications" ? `Başvurular (${apps.length})` : t === "officers" ? `Personel (${officers.length})` : t === "access" ? `Erişim (${accessRequests.filter(r => r.status === "pending").length})` : t === "badges" ? `Rozetler (${badgeTypes.length})` : t === "announcements" ? `Duyurular (${announcements.length})` : t === "ribbon" ? `Kayan Mesajlar (${ribbonMessages.length})` : t === "archive" ? `Arşiv (${archivedApps.length})` : t === "rules" ? `Kurallar` : `Hesaplar (${accounts.length})`}
+              {t === "applications" ? `Başvurular (${apps.length})` : t === "officers" ? `Personel (${officers.length})` : t === "access" ? `Erişim (${accessRequests.filter(r => r.status === "pending").length})` : t === "badges" ? `Rozetler (${badgeTypes.length})` : t === "announcements" ? `Duyurular (${announcements.length})` : t === "ribbon" ? `Kayan Mesajlar (${ribbonMessages.length})` : t === "gallery" ? `Galeri (${galleryImages.length})` : t === "archive" ? `Arşiv (${archivedApps.length})` : t === "rules" ? `Kurallar` : `Hesaplar (${accounts.length})`}
             </button>
           ))}
       </div>
@@ -1212,46 +1271,55 @@ export default function AdminDashboard() {
               Henüz alt hesap oluşturulmamış
             </div>
           ) : (
-            <div style={{ border: "1px solid var(--color-line)" }}>
-              <div style={{ display: "grid", gridTemplateColumns: "1fr 160px 120px 140px 200px", background: "var(--color-bg-3)", borderBottom: "1px solid var(--color-line)", padding: "10px 16px", gap: 8 }}>
-                {["Kullanıcı Adı", "Yetki", "Durum", "Oluşturulma", ""].map((h, i) => (
-                  <span key={i} style={{ ...mono, fontSize: "0.55rem", color: "var(--color-faint)" }}>{h}</span>
-                ))}
-              </div>
-              {accounts.map((acc) => (
-                <div key={acc.id} style={{ display: "grid", gridTemplateColumns: "1fr 160px 120px 140px 200px", padding: "12px 16px", borderBottom: "1px solid var(--color-line-soft)", alignItems: "center", gap: 8 }}>
-                  <span style={{ fontFamily: "var(--font-body)", fontSize: "0.9rem", fontWeight: 600, color: "var(--color-txt)" }}>{acc.username}</span>
-                  <span style={{
-                    ...mono, fontSize: "0.58rem",
-                    color: acc.role === "moderator" ? "oklch(0.72 0.16 230)" : "var(--color-status-on)",
-                    border: `1px solid ${acc.role === "moderator" ? "oklch(0.72 0.16 230)" : "var(--color-status-on)"}`,
-                    padding: "3px 8px",
-                    display: "inline-block",
-                  }}>
-                    {acc.role === "moderator" ? "Moderatör" : "Mülakat"}
-                  </span>
-                  <span style={{ ...mono, fontSize: "0.58rem", color: acc.is_active ? "var(--color-status-on)" : "var(--color-warn)" }}>
-                    {acc.is_active ? "● Aktif" : "● Pasif"}
-                  </span>
-                  <span style={{ ...mono, fontSize: "0.58rem", color: "var(--color-faint)" }}>
-                    {new Date(acc.created_at).toLocaleDateString("tr-TR")}
-                  </span>
-                  <div className="flex gap-2 flex-wrap">
-                    <button
-                      onClick={() => toggleAccount(acc.id, !acc.is_active)}
-                      style={{ ...mono, fontSize: "0.55rem", padding: "5px 10px", background: "transparent", color: acc.is_active ? "var(--color-warn)" : "var(--color-status-on)", border: `1px solid ${acc.is_active ? "var(--color-warn)" : "var(--color-status-on)"}`, cursor: "pointer" }}
-                    >
-                      {acc.is_active ? "Devre Dışı" : "Etkinleştir"}
-                    </button>
-                    <button
-                      onClick={() => deleteAccount(acc.id, acc.username)}
-                      style={{ ...mono, fontSize: "0.55rem", padding: "5px 10px", background: "transparent", color: "var(--color-faint)", border: "1px solid var(--color-line)", cursor: "pointer" }}
-                    >
-                      Sil
-                    </button>
+            <div style={{ display: "flex", flexDirection: "column", gap: 12 }}>
+              {accounts.map((acc) => {
+                const perms = acc.permissions ?? {}
+                const PERM_LABELS: { key: string; label: string; moderatorDefault: boolean }[] = [
+                  { key: "announce", label: "Duyuru Gönder", moderatorDefault: true },
+                  { key: "images", label: "Galeri Yönet", moderatorDefault: true },
+                  { key: "forum", label: "Forum Oku", moderatorDefault: true },
+                  { key: "accounts", label: "Hesap Oluştur", moderatorDefault: false },
+                ]
+                return (
+                  <div key={acc.id} style={{ background: "var(--color-bg-2)", border: "1px solid var(--color-line)", padding: "16px 20px" }}>
+                    <div style={{ display: "flex", alignItems: "center", gap: 12, flexWrap: "wrap", marginBottom: 14 }}>
+                      <span style={{ fontFamily: "var(--font-body)", fontSize: "0.95rem", fontWeight: 600, color: "var(--color-txt)", flex: 1, minWidth: 120 }}>{acc.username}</span>
+                      <span style={{ ...mono, fontSize: "0.56rem", color: acc.role === "moderator" ? "oklch(0.72 0.16 230)" : "var(--color-status-on)", border: `1px solid ${acc.role === "moderator" ? "oklch(0.72 0.16 230)" : "var(--color-status-on)"}`, padding: "3px 8px" }}>
+                        {acc.role === "moderator" ? "Moderatör" : "Mülakat"}
+                      </span>
+                      <span style={{ ...mono, fontSize: "0.56rem", color: acc.is_active ? "var(--color-status-on)" : "var(--color-warn)" }}>
+                        {acc.is_active ? "● Aktif" : "● Pasif"}
+                      </span>
+                      <span style={{ ...mono, fontSize: "0.55rem", color: "var(--color-faint)" }}>{new Date(acc.created_at).toLocaleDateString("tr-TR")}</span>
+                      <div className="flex gap-2">
+                        <button onClick={() => toggleAccount(acc.id, !acc.is_active)} style={{ ...mono, fontSize: "0.55rem", padding: "5px 10px", background: "transparent", color: acc.is_active ? "var(--color-warn)" : "var(--color-status-on)", border: `1px solid ${acc.is_active ? "var(--color-warn)" : "var(--color-status-on)"}`, cursor: "pointer" }}>
+                          {acc.is_active ? "Devre Dışı" : "Etkinleştir"}
+                        </button>
+                        <button onClick={() => deleteAccount(acc.id, acc.username)} style={{ ...mono, fontSize: "0.55rem", padding: "5px 10px", background: "transparent", color: "var(--color-faint)", border: "1px solid var(--color-line)", cursor: "pointer" }}>Sil</button>
+                      </div>
+                    </div>
+                    {/* Per-account permission overrides */}
+                    <div style={{ borderTop: "1px solid var(--color-line)", paddingTop: 12 }}>
+                      <div style={{ ...mono, fontSize: "0.5rem", color: "var(--color-faint)", marginBottom: 10, letterSpacing: "0.18em" }}>Özel Yetkiler</div>
+                      <div className="flex gap-4 flex-wrap">
+                        {PERM_LABELS.map(({ key, label, moderatorDefault }) => {
+                          const effective = key in perms ? perms[key] : (acc.role === "moderator" ? moderatorDefault : false)
+                          return (
+                            <label key={key} className="flex items-center gap-2 cursor-pointer">
+                              <input
+                                type="checkbox"
+                                checked={effective}
+                                onChange={(e) => savePermissions(acc.id, { ...perms, [key]: e.target.checked })}
+                              />
+                              <span style={{ ...mono, fontSize: "0.58rem", color: effective ? "var(--color-accent)" : "var(--color-faint)", fontWeight: effective ? 700 : 400 }}>{label}</span>
+                            </label>
+                          )
+                        })}
+                      </div>
+                    </div>
                   </div>
-                </div>
-              ))}
+                )
+              })}
             </div>
           )}
         </div>
@@ -1330,11 +1398,80 @@ export default function AdminDashboard() {
         </div>
       )}
 
+      {/* ── Gallery tab ── */}
+      {tab === "gallery" && (
+        <div style={{ padding: "24px clamp(20px,4vw,48px)" }}>
+          {/* Add image form */}
+          <div style={{ background: "var(--color-bg-2)", border: "1px solid var(--color-line)", padding: 24, marginBottom: 32 }}>
+            <div style={{ ...mono, fontSize: "0.65rem", color: "var(--color-accent)", marginBottom: 4 }}>Galeriye Görsel Ekle</div>
+            <div style={{ ...mono, fontSize: "0.55rem", color: "var(--color-faint)", marginBottom: 20 }}>
+              Sunucudaki bir dosya yolunu (/gallery/g17.png) veya tam URL girin.
+            </div>
+            <form onSubmit={async (e) => {
+              e.preventDefault()
+              if (!newGalleryUrl.trim()) return
+              setGallerySaving(true)
+              const res = await fetch("/api/gallery-images", { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ url: newGalleryUrl.trim(), caption: newGalleryCaption.trim() || null }) })
+              if (res.ok) { const created = await res.json(); setGalleryImages(p => [...p, created]); setNewGalleryUrl(""); setNewGalleryCaption("") }
+              setGallerySaving(false)
+            }}>
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-4 mb-4">
+                <label style={{ display: "flex", flexDirection: "column", gap: 6 }}>
+                  <span style={{ ...mono, fontSize: "0.55rem", color: "var(--color-faint)" }}>Görsel URL / Yolu</span>
+                  <input type="text" value={newGalleryUrl} onChange={(e) => setNewGalleryUrl(e.target.value)} placeholder="/gallery/g17.png veya https://…" style={{ background: "var(--color-bg)", border: "1px solid var(--color-line)", color: "var(--color-txt)", padding: "10px 14px", fontFamily: "var(--font-mono)", fontSize: "0.75rem", outline: "none" }} />
+                </label>
+                <label style={{ display: "flex", flexDirection: "column", gap: 6 }}>
+                  <span style={{ ...mono, fontSize: "0.55rem", color: "var(--color-faint)" }}>Açıklama (opsiyonel)</span>
+                  <input type="text" value={newGalleryCaption} onChange={(e) => setNewGalleryCaption(e.target.value)} placeholder="Saha görüntüsü açıklaması" style={{ background: "var(--color-bg)", border: "1px solid var(--color-line)", color: "var(--color-txt)", padding: "10px 14px", fontFamily: "var(--font-mono)", fontSize: "0.75rem", outline: "none" }} />
+                </label>
+              </div>
+              {newGalleryUrl.trim() && (
+                <div style={{ marginBottom: 16, display: "flex", alignItems: "center", gap: 10 }}>
+                  <span style={{ ...mono, fontSize: "0.55rem", color: "var(--color-faint)" }}>Önizleme:</span>
+                  {/* eslint-disable-next-line @next/next/no-img-element */}
+                  <img src={newGalleryUrl.trim()} alt="önizleme" style={{ height: 60, width: "auto", objectFit: "cover", border: "1px solid var(--color-line)" }} onError={(e) => { (e.currentTarget as HTMLImageElement).style.display = "none" }} />
+                </div>
+              )}
+              <button type="submit" disabled={gallerySaving || !newGalleryUrl.trim()} style={{ ...mono, fontSize: "0.65rem", padding: "10px 24px", background: newGalleryUrl.trim() && !gallerySaving ? "var(--color-accent)" : "var(--color-bg-3)", color: newGalleryUrl.trim() && !gallerySaving ? "var(--color-accent-ink)" : "var(--color-faint)", border: "none", cursor: newGalleryUrl.trim() ? "pointer" : "not-allowed", fontWeight: 700 }}>
+                {gallerySaving ? "Ekleniyor…" : "Ekle"}
+              </button>
+            </form>
+          </div>
+
+          {/* Gallery grid */}
+          {galleryImages.length === 0 ? (
+            <div style={{ ...mono, fontSize: "0.65rem", color: "var(--color-faint)", padding: 32, textAlign: "center" }}>Henüz galeri görseli eklenmedi</div>
+          ) : (
+            <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fill, minmax(200px, 1fr))", gap: 12 }}>
+              {galleryImages.map((img) => (
+                <div key={img.id} style={{ position: "relative", border: "1px solid var(--color-line)", background: "var(--color-bg-3)" }}>
+                  {/* eslint-disable-next-line @next/next/no-img-element */}
+                  <img src={img.url} alt={img.caption ?? ""} style={{ width: "100%", aspectRatio: "16/9", objectFit: "cover", display: "block" }} />
+                  {img.caption && <div style={{ ...mono, fontSize: "0.52rem", color: "var(--color-faint)", padding: "6px 8px", borderTop: "1px solid var(--color-line)" }}>{img.caption}</div>}
+                  <button
+                    onClick={async () => {
+                      await fetch("/api/gallery-images", { method: "DELETE", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ id: img.id }) })
+                      setGalleryImages(p => p.filter(g => g.id !== img.id))
+                    }}
+                    style={{ position: "absolute", top: 6, right: 6, ...mono, fontSize: "0.5rem", padding: "3px 7px", background: "oklch(0 0 0 / 0.7)", color: "var(--color-warn)", border: "1px solid var(--color-warn)", cursor: "pointer" }}
+                  >✕</button>
+                </div>
+              ))}
+            </div>
+          )}
+        </div>
+      )}
+
       {/* ── Archive tab ── */}
       {tab === "archive" && (
         <div style={{ padding: "24px clamp(20px,4vw,48px)" }}>
-          <div style={{ ...mono, fontSize: "0.55rem", color: "var(--color-faint)", marginBottom: 20 }}>
-            Silinen başvurular burada saklanır. Geri yüklenebilir veya kalıcı olarak silinebilir.
+          <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", marginBottom: 20, flexWrap: "wrap", gap: 12 }}>
+            <span style={{ ...mono, fontSize: "0.55rem", color: "var(--color-faint)" }}>
+              Silinen başvurular burada saklanır. 15 günden eski kayıtlar vurgulanır.
+            </span>
+            <button onClick={cleanupArchive} style={{ ...mono, fontSize: "0.58rem", padding: "7px 16px", background: "transparent", color: "var(--color-warn)", border: "1px solid var(--color-warn)", cursor: "pointer" }}>
+              ✕ 15 Günden Eskiyi Temizle
+            </button>
           </div>
           {archiveLoading ? (
             <div style={{ ...mono, fontSize: "0.65rem", color: "var(--color-faint)", padding: 32, textAlign: "center" }}>YÜKLENİYOR…</div>
@@ -1347,14 +1484,19 @@ export default function AdminDashboard() {
                   <span key={i} style={{ ...mono, fontSize: "0.55rem", color: "var(--color-faint)" }}>{h}</span>
                 ))}
               </div>
-              {archivedApps.map((a) => (
-                <div key={a.id} style={{ display: "grid", gridTemplateColumns: "1fr 140px 120px 140px 220px", padding: "12px 16px", borderBottom: "1px solid var(--color-line-soft)", alignItems: "center", gap: 8 }}>
-                  <span style={{ fontFamily: "var(--font-body)", fontSize: "0.9rem", color: "var(--color-txt)", fontWeight: 500 }}>{a.full_name}</span>
+              {archivedApps.map((a) => {
+                const isOld = (Date.now() - new Date(a.deleted_at).getTime()) > 15 * 24 * 60 * 60 * 1000
+                return (
+                <div key={a.id} style={{ display: "grid", gridTemplateColumns: "1fr 140px 120px 140px 220px", padding: "12px 16px", borderBottom: "1px solid var(--color-line-soft)", alignItems: "center", gap: 8, background: isOld ? "oklch(0.16 0.06 30 / 0.3)" : "transparent" }}>
+                  <span style={{ fontFamily: "var(--font-body)", fontSize: "0.9rem", color: "var(--color-txt)", fontWeight: 500 }}>
+                    {a.full_name}
+                    {isOld && <span style={{ ...mono, fontSize: "0.48rem", color: "var(--color-warn)", marginLeft: 8 }}>⚠ 15+ GÜN</span>}
+                  </span>
                   <span style={{ ...mono, fontSize: "0.58rem", color: "var(--color-faint)" }}>{a.discord}</span>
                   <span style={{ ...mono, fontSize: "0.58rem", color: STATUS_COLORS[a.status as AppStatus] ?? "var(--color-faint)" }}>
                     {STATUS_LABELS[a.status as AppStatus] ?? a.status}
                   </span>
-                  <span style={{ ...mono, fontSize: "0.58rem", color: "var(--color-faint)" }}>{new Date(a.deleted_at).toLocaleDateString("tr-TR")}</span>
+                  <span style={{ ...mono, fontSize: "0.58rem", color: isOld ? "var(--color-warn)" : "var(--color-faint)" }}>{new Date(a.deleted_at).toLocaleDateString("tr-TR")}</span>
                   <div className="flex gap-2 flex-wrap">
                     <button
                       onClick={() => restoreApp(a.id)}
@@ -1370,7 +1512,7 @@ export default function AdminDashboard() {
                     </button>
                   </div>
                 </div>
-              ))}
+              )})}
             </div>
           )}
         </div>
@@ -1384,58 +1526,91 @@ export default function AdminDashboard() {
           ) : accessRequests.length === 0 ? (
             <div style={{ ...mono, fontSize: "0.65rem", color: "var(--color-faint)", padding: 32, textAlign: "center" }}>Bekleyen erişim talebi yok</div>
           ) : (
-            <div style={{ border: "1px solid var(--color-line)" }}>
-              <div style={{ display: "grid", gridTemplateColumns: "48px 1fr 200px 130px 220px", background: "var(--color-bg-3)", borderBottom: "1px solid var(--color-line)", padding: "10px 16px", gap: 8 }}>
-                {["", "Discord", "ID", "Tarih", ""].map((h, i) => (
-                  <span key={i} style={{ ...mono, fontSize: "0.55rem", color: "var(--color-faint)" }}>{h}</span>
-                ))}
-              </div>
+            <div style={{ display: "flex", flexDirection: "column", gap: 8 }}>
               {accessRequests.map((r) => (
-                <div key={r.id} style={{ display: "grid", gridTemplateColumns: "48px 1fr 200px 130px 220px", padding: "12px 16px", borderBottom: "1px solid var(--color-line-soft)", alignItems: "center", gap: 8 }}>
-                  {r.discord_avatar ? (
-                    // eslint-disable-next-line @next/next/no-img-element
-                    <img src={r.discord_avatar} alt="" className="rounded-full" style={{ width: 36, height: 36 }} />
-                  ) : (
-                    <div className="rounded-full flex items-center justify-center" style={{ width: 36, height: 36, background: "#5865F2", ...mono, fontSize: "0.6rem", color: "#fff" }}>
-                      {r.discord_name?.[0]?.toUpperCase()}
-                    </div>
-                  )}
-                  <div>
-                    <div style={{ fontFamily: "var(--font-body)", fontSize: "0.9rem", color: "var(--color-txt)", fontWeight: 500 }}>{r.discord_name}</div>
-                    <div style={{ ...mono, fontSize: "0.55rem", color: r.status === "pending" ? "var(--color-accent)" : r.status === "approved" ? "var(--color-status-on)" : "var(--color-warn)", marginTop: 2 }}>
-                      {r.status === "pending" ? "● Beklemede" : r.status === "approved" ? "● Onaylandı" : "● Reddedildi"}
-                    </div>
-                    {r.status === "approved" && isLinked(r.discord_id) && (
-                      <div style={{ ...mono, fontSize: "0.5rem", color: "var(--color-status-on)", marginTop: 2 }}>✓ Memura bağlandı</div>
+                <div key={r.id} style={{ background: "var(--color-bg-2)", border: "1px solid var(--color-line)", padding: "14px 18px" }}>
+                  {/* Main row */}
+                  <div style={{ display: "grid", gridTemplateColumns: "40px 1fr 180px 120px auto", alignItems: "center", gap: 12 }}>
+                    {r.discord_avatar ? (
+                      // eslint-disable-next-line @next/next/no-img-element
+                      <img src={r.discord_avatar} alt="" className="rounded-full" style={{ width: 36, height: 36 }} />
+                    ) : (
+                      <div className="rounded-full flex items-center justify-center" style={{ width: 36, height: 36, background: "#5865F2", ...mono, fontSize: "0.6rem", color: "#fff" }}>
+                        {r.discord_name?.[0]?.toUpperCase()}
+                      </div>
                     )}
-                  </div>
-                  <span style={{ ...mono, fontSize: "0.58rem", color: "var(--color-faint)" }}>{r.discord_id}</span>
-                  <span style={{ ...mono, fontSize: "0.58rem", color: "var(--color-faint)" }}>{new Date(r.created_at).toLocaleDateString("tr-TR")}</span>
-                  <div className="flex gap-2 flex-wrap">
-                    {r.status === "pending" && (
-                      <>
-                        <button onClick={() => openLinkModal(r, true)} style={{ ...mono, fontSize: "0.55rem", padding: "5px 10px", background: "var(--color-status-on)", color: "#000", border: "none", cursor: "pointer", fontWeight: 700 }}>Onayla</button>
+                    <div>
+                      <div style={{ fontFamily: "var(--font-body)", fontSize: "0.9rem", color: "var(--color-txt)", fontWeight: 500 }}>{r.discord_name}</div>
+                      <div style={{ ...mono, fontSize: "0.55rem", color: r.status === "pending" ? "var(--color-accent)" : r.status === "approved" ? "var(--color-status-on)" : "var(--color-warn)", marginTop: 2 }}>
+                        {r.status === "pending" ? "● Beklemede" : r.status === "approved" ? "● Onaylandı" : "● Reddedildi"}
+                      </div>
+                      {r.status === "approved" && isLinked(r.discord_id) && (
+                        <div style={{ ...mono, fontSize: "0.5rem", color: "var(--color-status-on)", marginTop: 2 }}>✓ Memura bağlandı</div>
+                      )}
+                    </div>
+                    <span style={{ ...mono, fontSize: "0.56rem", color: "var(--color-faint)" }}>{r.discord_id}</span>
+                    <span style={{ ...mono, fontSize: "0.56rem", color: "var(--color-faint)" }}>{new Date(r.created_at).toLocaleDateString("tr-TR")}</span>
+                    <div className="flex gap-2 flex-wrap">
+                      {r.status === "pending" && (
+                        <>
+                          <button onClick={() => openLinkModal(r, true)} style={{ ...mono, fontSize: "0.55rem", padding: "5px 10px", background: "var(--color-status-on)", color: "#000", border: "none", cursor: "pointer", fontWeight: 700 }}>Onayla</button>
+                          <button onClick={async () => {
+                            await fetch("/api/access-request", { method: "PATCH", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ id: r.id, status: "rejected" }) })
+                            setAccessRequests(p => p.map(x => x.id === r.id ? { ...x, status: "rejected" } : x))
+                          }} style={{ ...mono, fontSize: "0.55rem", padding: "5px 10px", background: "transparent", color: "var(--color-warn)", border: "1px solid var(--color-warn)", cursor: "pointer" }}>Reddet</button>
+                        </>
+                      )}
+                      {r.status === "approved" && (
+                        <button onClick={() => openLinkModal(r, false)} style={{ ...mono, fontSize: "0.55rem", padding: "5px 10px", background: isLinked(r.discord_id) ? "transparent" : "var(--color-accent)", color: isLinked(r.discord_id) ? "var(--color-accent)" : "var(--color-accent-ink)", border: isLinked(r.discord_id) ? "1px solid var(--color-accent)" : "none", cursor: "pointer", fontWeight: 700 }}>
+                          {isLinked(r.discord_id) ? "Yeniden Bağla" : "Memura Bağla"}
+                        </button>
+                      )}
+                      {r.status !== "pending" && (
                         <button onClick={async () => {
-                          await fetch("/api/access-request", { method: "PATCH", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ id: r.id, status: "rejected" }) })
-                          setAccessRequests(p => p.map(x => x.id === r.id ? { ...x, status: "rejected" } : x))
-                        }} style={{ ...mono, fontSize: "0.55rem", padding: "5px 10px", background: "transparent", color: "var(--color-warn)", border: "1px solid var(--color-warn)", cursor: "pointer" }}>Reddet</button>
-                      </>
-                    )}
-                    {r.status === "approved" && (
-                      <button onClick={() => openLinkModal(r, false)} style={{ ...mono, fontSize: "0.55rem", padding: "5px 10px", background: isLinked(r.discord_id) ? "transparent" : "var(--color-accent)", color: isLinked(r.discord_id) ? "var(--color-accent)" : "var(--color-accent-ink)", border: isLinked(r.discord_id) ? "1px solid var(--color-accent)" : "none", cursor: "pointer", fontWeight: 700 }}>
-                        {isLinked(r.discord_id) ? "Yeniden Bağla" : "Memura Bağla"}
-                      </button>
-                    )}
-                    {r.status !== "pending" && (
-                      <button onClick={async () => {
-                        const res = await fetch("/api/access-request", { method: "DELETE", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ id: r.id }) })
-                        if (res.ok) {
-                          setOfficers(p => p.map(o => o.discord_id === r.discord_id ? { ...o, discord_id: null } : o))
-                          setAccessRequests(p => p.filter(x => x.id !== r.id))
-                        }
-                      }} style={{ ...mono, fontSize: "0.55rem", padding: "5px 10px", background: "transparent", color: "var(--color-faint)", border: "1px solid var(--color-line)", cursor: "pointer" }}>Sil</button>
-                    )}
+                          const res = await fetch("/api/access-request", { method: "DELETE", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ id: r.id }) })
+                          if (res.ok) {
+                            setOfficers(p => p.map(o => o.discord_id === r.discord_id ? { ...o, discord_id: null } : o))
+                            setAccessRequests(p => p.filter(x => x.id !== r.id))
+                          }
+                        }} style={{ ...mono, fontSize: "0.55rem", padding: "5px 10px", background: "transparent", color: "var(--color-faint)", border: "1px solid var(--color-line)", cursor: "pointer" }}>Sil</button>
+                      )}
+                    </div>
                   </div>
+                  {/* Admin notes row */}
+                  <div style={{ marginTop: 10, paddingTop: 10, borderTop: "1px solid var(--color-line-soft)", display: "flex", gap: 8, alignItems: "center" }}>
+                    <span style={{ ...mono, fontSize: "0.5rem", color: "var(--color-faint)", flexShrink: 0 }}>Not:</span>
+                    <NoteInput
+                      initialValue={r.admin_notes ?? ""}
+                      onSave={(val) => saveAccessNote(r.id, val)}
+                    />
+                  </div>
+                  {/* User panel permissions (only for approved+linked users) */}
+                  {r.status === "approved" && isLinked(r.discord_id) && (() => {
+                    const UP_LABELS = [
+                      { key: "duty", label: "Mesai Başlat/Durdur" },
+                      { key: "stats", label: "İstatistikler" },
+                      { key: "logs", label: "Mesai Geçmişi" },
+                      { key: "badges", label: "Rozetler" },
+                    ]
+                    const perms = { duty: true, stats: true, logs: true, badges: true, ...(r.user_permissions ?? {}) }
+                    return (
+                      <div style={{ marginTop: 10, paddingTop: 10, borderTop: "1px solid var(--color-line-soft)" }}>
+                        <div style={{ ...mono, fontSize: "0.5rem", color: "var(--color-faint)", marginBottom: 8, letterSpacing: "0.18em" }}>Panel İzinleri</div>
+                        <div className="flex gap-4 flex-wrap">
+                          {UP_LABELS.map(({ key, label }) => (
+                            <label key={key} className="flex items-center gap-2 cursor-pointer">
+                              <input
+                                type="checkbox"
+                                checked={perms[key as keyof typeof perms]}
+                                onChange={(e) => saveUserPermissions(r.id, { ...perms, [key]: e.target.checked })}
+                              />
+                              <span style={{ ...mono, fontSize: "0.58rem", color: perms[key as keyof typeof perms] ? "var(--color-accent)" : "var(--color-faint)", fontWeight: perms[key as keyof typeof perms] ? 700 : 400 }}>{label}</span>
+                            </label>
+                          ))}
+                        </div>
+                      </div>
+                    )
+                  })()}
                 </div>
               ))}
             </div>

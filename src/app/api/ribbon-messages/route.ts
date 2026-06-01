@@ -1,6 +1,6 @@
 import { type NextRequest } from "next/server"
 import { getDb } from "@/lib/db"
-import { isAtLeastModerator } from "@/lib/adminAuth"
+import { canDo } from "@/lib/adminAuth"
 
 export async function GET() {
   const sql = getDb()
@@ -13,7 +13,7 @@ export async function GET() {
 }
 
 export async function POST(req: NextRequest) {
-  if (!(await isAtLeastModerator())) return Response.json({ error: "Yetkisiz" }, { status: 403 })
+  if (!(await canDo("announce"))) return Response.json({ error: "Yetkisiz" }, { status: 403 })
   const { message, type } = await req.json()
   if (!message?.trim()) return Response.json({ error: "Mesaj boş olamaz" }, { status: 400 })
   const sql = getDb()
@@ -24,7 +24,7 @@ export async function POST(req: NextRequest) {
 }
 
 export async function DELETE(req: NextRequest) {
-  if (!(await isAtLeastModerator())) return Response.json({ error: "Yetkisiz" }, { status: 403 })
+  if (!(await canDo("announce"))) return Response.json({ error: "Yetkisiz" }, { status: 403 })
   const { id } = await req.json()
   const sql = getDb()
   await sql`DELETE FROM ribbon_messages WHERE id = ${id}`
