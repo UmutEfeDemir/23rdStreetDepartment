@@ -39,7 +39,7 @@ interface OfficerRow {
 
 const STATUS_LABELS: Record<AppStatus, string> = { pending: "Beklemede", interview: "Mülakat", accepted: "Kabul", rejected: "Red" }
 const STATUS_COLORS: Record<AppStatus, string> = { pending: "var(--color-accent)", interview: "oklch(0.72 0.16 230)", accepted: "var(--color-status-on)", rejected: "var(--color-warn)" }
-const UNITS = ["HC", "Detective", "HPD", "CID", "SWAT", "TFD", "K9", "ASD"]
+const UNITS = ["High Command", "Supervisor", "Polis"]
 const RANKS = ["Captain", "Senior Lieutenant", "Lieutenant", "Senior Sergeant", "Sergeant", "Senior Officer", "Officer", "Probationary Officer", "Cadet"]
 const STATUSES = ["Görevde", "Aktif", "İzinli", "Eğitimde"]
 

@@ -21,19 +21,14 @@ export type Rank =
   | "Deneme Trooper"
   | "Aday"
 
-export type Unit = "HC" | "Detective" | "HPD" | "CID" | "SWAT" | "TFD" | "K9" | "ASD"
+export type Unit = "High Command" | "Supervisor" | "Polis"
 
 export type OfficerStatus = "Görevde" | "Aktif" | "İzinli" | "Eğitimde"
 
 export const UNIT_LABELS: Record<Unit, string> = {
-  HC: "High Command",
-  Detective: "Detective Supervisor",
-  HPD: "Karayolu Devriye",
-  CID: "Suç Soruşturma",
-  SWAT: "Özel Harekat",
-  TFD: "Trafik Denetleme",
-  K9: "K9 Köpek Birimi",
-  ASD: "Hava Destek",
+  "High Command": "High Command",
+  "Supervisor": "Supervisor",
+  "Polis": "Polis",
 }
 
 export const RANK_ORDER: Rank[] = [

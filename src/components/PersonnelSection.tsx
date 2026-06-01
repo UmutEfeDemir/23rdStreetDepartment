@@ -2,7 +2,7 @@
 
 import { useState, useEffect } from "react"
 
-type UnitFilter = "TÜM" | "HC" | "Detective" | "HPD" | "CID" | "SWAT" | "TFD" | "K9" | "ASD"
+type UnitFilter = "TÜM" | "High Command" | "Supervisor" | "Polis"
 
 interface OfficerRow {
   id: string
@@ -13,7 +13,7 @@ interface OfficerRow {
   status: string
 }
 
-const UNITS: UnitFilter[] = ["TÜM", "HC", "Detective", "HPD", "CID", "SWAT", "TFD", "K9", "ASD"]
+const UNITS: UnitFilter[] = ["TÜM", "High Command", "Supervisor", "Polis"]
 
 function Monogram({ name }: { name: string }) {
   const initials = name.split(/[\s.]/).filter(Boolean).map((p) => p[0]).join("").slice(0, 2).toUpperCase()
@@ -78,8 +78,8 @@ export default function PersonnelSection() {
             </div>
 
             <div style={{ border: "1px solid var(--color-line)", overflow: "hidden" }}>
-              <div className="grid" style={{ gridTemplateColumns: "100px 1fr 160px 90px 120px", background: "var(--color-bg-3)", borderBottom: "1px solid var(--color-line)", padding: "10px 16px" }}>
-                {["ROZET KOD", "PERSONEL", "RÜTBE", "BİRİM", "DURUM"].map((h) => (
+              <div className="grid" style={{ gridTemplateColumns: "100px 1fr 180px 140px 120px", background: "var(--color-bg-3)", borderBottom: "1px solid var(--color-line)", padding: "10px 16px" }}>
+                {["ROZET KOD", "PERSONEL", "RÜTBE", "EMİR KOMUTA", "DURUM"].map((h) => (
                   <span key={h} style={{ fontFamily: "var(--font-mono)", fontSize: "0.58rem", letterSpacing: "0.2em", textTransform: "uppercase", color: "var(--color-faint)" }}>{h}</span>
                 ))}
               </div>
@@ -90,7 +90,7 @@ export default function PersonnelSection() {
                 </div>
               ) : (
                 filtered.map((o, i) => (
-                  <div key={o.id} className="grid table-row-hover cursor-default" style={{ gridTemplateColumns: "100px 1fr 160px 90px 120px", padding: "12px 16px", borderBottom: i < filtered.length - 1 ? "1px solid var(--color-line-soft)" : "none", alignItems: "center" }}>
+                  <div key={o.id} className="grid table-row-hover cursor-default" style={{ gridTemplateColumns: "100px 1fr 180px 140px 120px", padding: "12px 16px", borderBottom: i < filtered.length - 1 ? "1px solid var(--color-line-soft)" : "none", alignItems: "center" }}>
                     <span style={{ fontFamily: "var(--font-mono)", fontSize: "0.65rem", letterSpacing: "0.12em", color: "var(--color-accent)" }}>{o.badge_no}</span>
                     <div className="flex items-center gap-3">
                       <Monogram name={o.name} />
