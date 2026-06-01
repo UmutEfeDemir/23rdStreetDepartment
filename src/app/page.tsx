@@ -1,4 +1,5 @@
 import { SEED_OFFICERS, SEED_STATS, COMMAND_STAFF } from "@/lib/seed"
+import IntroAnimation from "@/components/IntroAnimation"
 import StatusRibbon from "@/components/StatusRibbon"
 import Nav from "@/components/Nav"
 import Hero from "@/components/Hero"
@@ -21,6 +22,7 @@ export default async function Home() {
 
   return (
     <div style={{ position: "relative", zIndex: 1 }}>
+      <IntroAnimation />
       <StatusRibbon />
       <Nav />
       <main>
