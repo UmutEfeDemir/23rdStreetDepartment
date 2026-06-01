@@ -62,13 +62,12 @@ export async function PATCH() {
 
   const log = active[0]
   const durationSeconds = Math.floor((Date.now() - new Date(log.clock_in).getTime()) / 1000)
-  const durationMinutes = Math.floor(durationSeconds / 60)
 
   await sql`
-    UPDATE duty_logs SET clock_out = now(), duration_minutes = ${durationMinutes} WHERE id = ${log.id}
+    UPDATE duty_logs SET clock_out = now(), duration_minutes = ${durationSeconds} WHERE id = ${log.id}
   `
-  const newTotalSeconds = officer.duty_hours * 60 + durationSeconds
+  const newTotalSeconds = officer.duty_hours + durationSeconds
   await sql`UPDATE officers_db SET status = 'Aktif', duty_hours = ${newTotalSeconds} WHERE id = ${officer.id}`
 
-  return Response.json({ durationMinutes })
+  return Response.json({ durationSeconds })
 }
