@@ -26,6 +26,21 @@ interface DutyLog {
   duration_minutes: number | null
 }
 
+interface Badge {
+  license_type: string
+  category: string
+  color_from: string
+  color_to: string | null
+}
+
+const CATEGORY_LABELS: Record<string, string> = {
+  unit: "Birimler",
+  license: "Lisanslar",
+  certificate: "Sertifikalar",
+  role: "Roller",
+}
+const CATEGORY_ORDER = ["unit", "license", "certificate", "role"]
+
 function StatBox({ label, value }: { label: string; value: string | number }) {
   return (
     <div className="flex flex-col p-4" style={{ background: "var(--color-bg-3)", border: "1px solid var(--color-line)" }}>
@@ -128,7 +143,7 @@ export default function PersonnelPanel() {
   const [officer, setOfficer] = useState<OfficerRow | null>(null)
   const [activeDuty, setActiveDuty] = useState<{ id: string; clock_in: string } | null>(null)
   const [logs, setLogs] = useState<DutyLog[]>([])
-  const [licenses, setLicenses] = useState<string[]>([])
+  const [licenses, setLicenses] = useState<Badge[]>([])
   const [loading, setLoading] = useState(false)
   const [dutyLoading, setDutyLoading] = useState(false)
   const [requestStatus, setRequestStatus] = useState<"idle" | "sending" | "sent" | "exists">("idle")
@@ -298,44 +313,55 @@ export default function PersonnelPanel() {
                 </div>
               )}
 
-              {/* Licenses & Roles */}
-              {officer && (licenses.length > 0) && (
-                <div style={{ background: "var(--color-bg-3)", border: "1px solid var(--color-line)" }}>
-                  <div className="px-5 py-3" style={{ borderBottom: "1px solid var(--color-line)" }}>
-                    <span style={{ ...mono, fontSize: "0.62rem", color: "var(--color-faint)" }}>Lisanslar ve Roller</span>
+              {/* Badges by category */}
+              {officer && licenses.length > 0 && (() => {
+                const grouped = licenses.reduce<Record<string, Badge[]>>((acc, b) => {
+                  const cat = b.category || "license"
+                  if (!acc[cat]) acc[cat] = []
+                  acc[cat].push(b)
+                  return acc
+                }, {})
+                const activeCats = CATEGORY_ORDER.filter(c => grouped[c]?.length > 0)
+                if (activeCats.length === 0) return null
+                return (
+                  <div style={{ background: "var(--color-bg-3)", border: "1px solid var(--color-line)" }}>
+                    <div className="px-5 py-3" style={{ borderBottom: "1px solid var(--color-line)" }}>
+                      <span style={{ ...mono, fontSize: "0.62rem", color: "var(--color-faint)" }}>Rozetler</span>
+                    </div>
+                    <div className="px-5 py-4 flex flex-col gap-5">
+                      {activeCats.map(cat => (
+                        <div key={cat}>
+                          <div style={{ ...mono, fontSize: "0.5rem", color: "var(--color-faint)", marginBottom: 8, letterSpacing: "0.2em" }}>
+                            {CATEGORY_LABELS[cat] ?? cat}
+                          </div>
+                          <div className="flex flex-wrap gap-2">
+                            {grouped[cat].map(b => (
+                              <span
+                                key={b.license_type}
+                                style={{
+                                  ...mono,
+                                  fontSize: "0.58rem",
+                                  fontWeight: 700,
+                                  padding: "5px 12px",
+                                  color: "#fff",
+                                  background: b.color_to
+                                    ? `linear-gradient(135deg, ${b.color_from}, ${b.color_to})`
+                                    : b.color_from,
+                                  letterSpacing: "0.12em",
+                                  textTransform: "uppercase",
+                                  boxShadow: b.color_to ? `0 0 8px ${b.color_to}40` : undefined,
+                                }}
+                              >
+                                {b.license_type}
+                              </span>
+                            ))}
+                          </div>
+                        </div>
+                      ))}
+                    </div>
                   </div>
-                  <div className="px-5 py-4 flex flex-col gap-4">
-                    {(() => {
-                      const myLicenses = licenses.filter((l) => LICENSE_TYPES.includes(l))
-                      const myRoles = licenses.filter((l) => ROLE_TYPES.includes(l))
-                      return (
-                        <>
-                          {myLicenses.length > 0 && (
-                            <div>
-                              <div style={{ ...mono, fontSize: "0.55rem", color: "var(--color-faint)", marginBottom: 8 }}>Lisanslar</div>
-                              <div className="flex flex-wrap gap-2">
-                                {myLicenses.map((l) => (
-                                  <span key={l} style={{ ...mono, fontSize: "0.58rem", padding: "4px 10px", background: "var(--color-bg-2)", border: "1px solid var(--color-accent)", color: "var(--color-accent)" }}>{l}</span>
-                                ))}
-                              </div>
-                            </div>
-                          )}
-                          {myRoles.length > 0 && (
-                            <div>
-                              <div style={{ ...mono, fontSize: "0.55rem", color: "var(--color-faint)", marginBottom: 8 }}>Roller</div>
-                              <div className="flex flex-wrap gap-2">
-                                {myRoles.map((r) => (
-                                  <span key={r} style={{ ...mono, fontSize: "0.58rem", padding: "4px 10px", background: "var(--color-bg-2)", border: "1px solid var(--color-status-on)", color: "var(--color-status-on)" }}>{r}</span>
-                                ))}
-                              </div>
-                            </div>
-                          )}
-                        </>
-                      )
-                    })()}
-                  </div>
-                </div>
-              )}
+                )
+              })()}
 
               {/* Duty log */}
               <div style={{ background: "var(--color-bg-3)", border: "1px solid var(--color-line)" }}>

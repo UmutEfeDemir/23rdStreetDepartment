@@ -29,8 +29,17 @@ export async function GET() {
     SELECT * FROM duty_logs WHERE officer_id = ${officer.id} AND clock_out IS NOT NULL
     ORDER BY clock_in DESC LIMIT 10
   `
-  const licenses = await sql`SELECT license_type FROM officer_licenses WHERE officer_id = ${officer.id} ORDER BY granted_at ASC`
-  return Response.json({ officer, activeDuty: activeDuty[0] ?? null, logs, licenses: licenses.map((l) => (l as { license_type: string }).license_type) })
+  const licenses = await sql`
+    SELECT ol.license_type,
+      COALESCE(bt.category, 'license') AS category,
+      COALESCE(bt.color_from, '#b8972a') AS color_from,
+      bt.color_to
+    FROM officer_licenses ol
+    LEFT JOIN badge_types bt ON bt.name = ol.license_type
+    WHERE ol.officer_id = ${officer.id}
+    ORDER BY COALESCE(bt.category, 'license'), ol.granted_at ASC
+  `
+  return Response.json({ officer, activeDuty: activeDuty[0] ?? null, logs, licenses })
 }
 
 export async function POST() {

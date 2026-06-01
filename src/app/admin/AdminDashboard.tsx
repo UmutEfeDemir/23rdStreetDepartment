@@ -7,7 +7,7 @@ import Image from "next/image"
 import Link from "next/link"
 
 type AppStatus = "pending" | "interview" | "accepted" | "rejected"
-type Tab = "applications" | "officers" | "access"
+type Tab = "applications" | "officers" | "access" | "badges"
 
 interface AccessRequest {
   id: string
@@ -46,9 +46,31 @@ interface OfficerRow {
   next_rank: string | null
 }
 
-const LICENSE_TYPES = ["Detective Unit", "Swat Unit", "CCW License", "AR License", "Air License", "HSU License", "Marry License"]
-const ROLE_TYPES = ["FTS", "FTO"]
-const ALL_LICENSE_TYPES = [...LICENSE_TYPES, ...ROLE_TYPES]
+interface BadgeType {
+  id: number
+  name: string
+  category: string
+  color_from: string
+  color_to: string | null
+}
+
+const CATEGORY_LABELS: Record<string, string> = {
+  unit: "Birimler",
+  license: "Lisanslar",
+  certificate: "Sertifikalar",
+  role: "Roller",
+}
+const CATEGORY_ORDER = ["unit", "license", "certificate", "role"]
+
+const COLOR_PRESETS = [
+  { label: "Mavi — Birim",        from: "#0f172a", to: "#3b82f6" },
+  { label: "Altın — Lisans",      from: "#78350f", to: "#f59e0b" },
+  { label: "Yeşil — Rol",         from: "#14532d", to: "#22c55e" },
+  { label: "Mor — Sertifika",     from: "#4c1d95", to: "#a855f7" },
+  { label: "Kırmızı",             from: "#7f1d1d", to: "#ef4444" },
+  { label: "Cyan",                from: "#164e63", to: "#22d3ee" },
+  { label: "Gümüş",               from: "#374151", to: "#9ca3af" },
+]
 
 const STATUS_LABELS: Record<AppStatus, string> = { pending: "Beklemede", interview: "Mülakat", accepted: "Kabul", rejected: "Red" }
 const STATUS_COLORS: Record<AppStatus, string> = { pending: "var(--color-accent)", interview: "oklch(0.72 0.16 230)", accepted: "var(--color-status-on)", rejected: "var(--color-warn)" }
@@ -127,6 +149,12 @@ export default function AdminDashboard() {
   const [linkError, setLinkError] = useState<string>("")
   const [linkIsApproval, setLinkIsApproval] = useState(false)
 
+  const [badgeTypes, setBadgeTypes] = useState<BadgeType[]>([])
+  const [newBadgeName, setNewBadgeName] = useState("")
+  const [newBadgeCategory, setNewBadgeCategory] = useState("unit")
+  const [newBadgePreset, setNewBadgePreset] = useState(0)
+  const [badgeSaving, setBadgeSaving] = useState(false)
+
   const router = useRouter()
 
   useEffect(() => {
@@ -142,6 +170,10 @@ export default function AdminDashboard() {
       .then((r) => r.json())
       .then((d) => { setAccessRequests(Array.isArray(d) ? d : []); setAccessLoading(false) })
       .catch(() => setAccessLoading(false))
+    fetch("/api/badge-types")
+      .then((r) => r.json())
+      .then((d) => { setBadgeTypes(Array.isArray(d) ? d : []) })
+      .catch(() => {})
   }, [])
 
   const updateStatus = async (id: string, status: AppStatus) => {
@@ -203,6 +235,29 @@ export default function AdminDashboard() {
       setEditTarget(null)
     }
     setSaving(false)
+  }
+
+  const addBadgeType = async (e: React.FormEvent) => {
+    e.preventDefault()
+    if (!newBadgeName.trim()) return
+    setBadgeSaving(true)
+    const preset = COLOR_PRESETS[newBadgePreset]
+    const res = await fetch("/api/badge-types", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ name: newBadgeName.trim(), category: newBadgeCategory, color_from: preset.from, color_to: preset.to }),
+    })
+    if (res.ok) {
+      const created = await res.json()
+      setBadgeTypes(p => [...p, created])
+      setNewBadgeName("")
+    }
+    setBadgeSaving(false)
+  }
+
+  const deleteBadgeType = async (id: number) => {
+    await fetch("/api/badge-types", { method: "DELETE", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ id }) })
+    setBadgeTypes(p => p.filter(b => b.id !== id))
   }
 
   const isLinked = (discordId: string) => officers.some((o) => o.discord_id === discordId)
@@ -397,39 +452,48 @@ export default function AdminDashboard() {
             <form onSubmit={saveEdit}>
               <OfficerFormFields form={editForm} setForm={setEditForm} />
 
-              {/* License management */}
+              {/* Badge management — dynamic from badge_types */}
               <div style={{ marginTop: 24, borderTop: "1px solid var(--color-line)", paddingTop: 20 }}>
-                <div style={{ ...mono, fontSize: "0.6rem", color: "var(--color-faint)", marginBottom: 14 }}>Lisanslar ve Roller</div>
-                <div style={{ marginBottom: 10 }}>
-                  <div style={{ ...mono, fontSize: "0.55rem", color: "var(--color-faint)", marginBottom: 8 }}>Lisanslar</div>
-                  <div className="flex flex-wrap gap-3">
-                    {LICENSE_TYPES.map((lt) => (
-                      <label key={lt} className="flex items-center gap-2 cursor-pointer">
-                        <input
-                          type="checkbox"
-                          checked={editLicenses.includes(lt)}
-                          onChange={(e) => editTarget && toggleLicense(editTarget.id, lt, e.target.checked)}
-                        />
-                        <span style={{ ...mono, fontSize: "0.6rem", color: editLicenses.includes(lt) ? "var(--color-accent)" : "var(--color-muted)" }}>{lt}</span>
-                      </label>
-                    ))}
-                  </div>
-                </div>
-                <div>
-                  <div style={{ ...mono, fontSize: "0.55rem", color: "var(--color-faint)", marginBottom: 8 }}>Roller</div>
-                  <div className="flex flex-wrap gap-3">
-                    {ROLE_TYPES.map((rt) => (
-                      <label key={rt} className="flex items-center gap-2 cursor-pointer">
-                        <input
-                          type="checkbox"
-                          checked={editLicenses.includes(rt)}
-                          onChange={(e) => editTarget && toggleLicense(editTarget.id, rt, e.target.checked)}
-                        />
-                        <span style={{ ...mono, fontSize: "0.6rem", color: editLicenses.includes(rt) ? "var(--color-status-on)" : "var(--color-muted)" }}>{rt}</span>
-                      </label>
-                    ))}
-                  </div>
-                </div>
+                <div style={{ ...mono, fontSize: "0.6rem", color: "var(--color-faint)", marginBottom: 14 }}>Rozetler</div>
+                {CATEGORY_ORDER.map(cat => {
+                  const catBadges = badgeTypes.filter(b => b.category === cat)
+                  if (catBadges.length === 0) return null
+                  return (
+                    <div key={cat} style={{ marginBottom: 14 }}>
+                      <div style={{ ...mono, fontSize: "0.52rem", color: "var(--color-faint)", marginBottom: 8, letterSpacing: "0.2em" }}>{CATEGORY_LABELS[cat]}</div>
+                      <div className="flex flex-wrap gap-3">
+                        {catBadges.map((bt) => {
+                          const checked = editLicenses.includes(bt.name)
+                          return (
+                            <label key={bt.id} className="flex items-center gap-2 cursor-pointer">
+                              <input
+                                type="checkbox"
+                                checked={checked}
+                                onChange={(e) => editTarget && toggleLicense(editTarget.id, bt.name, e.target.checked)}
+                              />
+                              <span style={{
+                                ...mono,
+                                fontSize: "0.58rem",
+                                fontWeight: checked ? 700 : 400,
+                                padding: checked ? "3px 10px" : undefined,
+                                background: checked && bt.color_to
+                                  ? `linear-gradient(135deg, ${bt.color_from}, ${bt.color_to})`
+                                  : checked ? bt.color_from : undefined,
+                                color: checked ? "#fff" : "var(--color-muted)",
+                                transition: "all 0.15s",
+                              }}>
+                                {bt.name}
+                              </span>
+                            </label>
+                          )
+                        })}
+                      </div>
+                    </div>
+                  )
+                })}
+                {badgeTypes.length === 0 && (
+                  <div style={{ ...mono, fontSize: "0.6rem", color: "var(--color-faint)" }}>Rozet tanımı yok. Rozetler sekmesinden ekleyin.</div>
+                )}
               </div>
 
               <div className="flex gap-3 mt-6">
@@ -487,9 +551,9 @@ export default function AdminDashboard() {
 
       {/* Tabs */}
       <div style={{ background: "var(--color-bg-2)", borderBottom: "1px solid var(--color-line)", padding: "0 clamp(20px,4vw,48px)", display: "flex", gap: 4 }}>
-        {(["applications", "officers", "access"] as Tab[]).map((t) => (
+        {(["applications", "officers", "access", "badges"] as Tab[]).map((t) => (
           <button key={t} onClick={() => setTab(t)} style={{ ...mono, fontSize: "0.62rem", padding: "14px 20px", background: "transparent", border: "none", borderBottom: tab === t ? "2px solid var(--color-accent)" : "2px solid transparent", color: tab === t ? "var(--color-accent)" : "var(--color-faint)", cursor: "pointer" }}>
-            {t === "applications" ? `Başvurular (${apps.length})` : t === "officers" ? `Personel (${officers.length})` : `Erişim Talepleri (${accessRequests.filter(r => r.status === "pending").length})`}
+            {t === "applications" ? `Başvurular (${apps.length})` : t === "officers" ? `Personel (${officers.length})` : t === "access" ? `Erişim (${accessRequests.filter(r => r.status === "pending").length})` : `Rozetler (${badgeTypes.length})`}
           </button>
         ))}
       </div>
@@ -608,6 +672,124 @@ export default function AdminDashboard() {
                   <button onClick={() => openEdit(o)} style={{ ...mono, fontSize: "0.55rem", padding: "5px 10px", border: "1px solid var(--color-accent)", color: "var(--color-accent)", background: "transparent", cursor: "pointer" }}>Düzenle</button>
                 </div>
               ))}
+            </div>
+          )}
+        </div>
+      )}
+
+      {/* ── Badges tab ── */}
+      {tab === "badges" && (
+        <div style={{ padding: "24px clamp(20px,4vw,48px)" }}>
+          {/* Add new badge form */}
+          <div style={{ background: "var(--color-bg-2)", border: "1px solid var(--color-line)", padding: 24, marginBottom: 32 }}>
+            <div style={{ ...mono, fontSize: "0.65rem", color: "var(--color-accent)", marginBottom: 20 }}>Yeni Rozet Ekle</div>
+            <form onSubmit={addBadgeType}>
+              <div className="grid grid-cols-1 md:grid-cols-3 gap-4 mb-4">
+                <label style={{ display: "flex", flexDirection: "column", gap: 6 }}>
+                  <span style={{ ...mono, fontSize: "0.55rem", color: "var(--color-faint)" }}>Rozet Adı</span>
+                  <input
+                    type="text"
+                    placeholder="örn. CCW License"
+                    value={newBadgeName}
+                    onChange={(e) => setNewBadgeName(e.target.value)}
+                    style={{ background: "var(--color-bg)", border: "1px solid var(--color-line)", color: "var(--color-txt)", padding: "8px 12px", fontFamily: "var(--font-mono)", fontSize: "0.75rem", outline: "none" }}
+                  />
+                </label>
+                <label style={{ display: "flex", flexDirection: "column", gap: 6 }}>
+                  <span style={{ ...mono, fontSize: "0.55rem", color: "var(--color-faint)" }}>Kategori</span>
+                  <select
+                    value={newBadgeCategory}
+                    onChange={(e) => setNewBadgeCategory(e.target.value)}
+                    style={{ background: "var(--color-bg)", border: "1px solid var(--color-line)", color: "var(--color-txt)", padding: "8px 12px", fontFamily: "var(--font-mono)", fontSize: "0.75rem", outline: "none" }}
+                  >
+                    {CATEGORY_ORDER.map(cat => (
+                      <option key={cat} value={cat}>{CATEGORY_LABELS[cat]}</option>
+                    ))}
+                  </select>
+                </label>
+                <label style={{ display: "flex", flexDirection: "column", gap: 6 }}>
+                  <span style={{ ...mono, fontSize: "0.55rem", color: "var(--color-faint)" }}>Renk Şeması</span>
+                  <select
+                    value={newBadgePreset}
+                    onChange={(e) => setNewBadgePreset(Number(e.target.value))}
+                    style={{ background: "var(--color-bg)", border: "1px solid var(--color-line)", color: "var(--color-txt)", padding: "8px 12px", fontFamily: "var(--font-mono)", fontSize: "0.75rem", outline: "none" }}
+                  >
+                    {COLOR_PRESETS.map((p, i) => (
+                      <option key={i} value={i}>{p.label}</option>
+                    ))}
+                  </select>
+                </label>
+              </div>
+              {/* Gradient preview */}
+              <div className="flex items-center gap-4 mb-4">
+                <span style={{ ...mono, fontSize: "0.55rem", color: "var(--color-faint)" }}>Önizleme:</span>
+                <span style={{
+                  ...mono,
+                  fontSize: "0.65rem",
+                  fontWeight: 700,
+                  padding: "4px 14px",
+                  background: COLOR_PRESETS[newBadgePreset].to
+                    ? `linear-gradient(135deg, ${COLOR_PRESETS[newBadgePreset].from}, ${COLOR_PRESETS[newBadgePreset].to})`
+                    : COLOR_PRESETS[newBadgePreset].from,
+                  color: "#fff",
+                  letterSpacing: "0.1em",
+                }}>
+                  {newBadgeName || "Rozet Adı"}
+                </span>
+              </div>
+              <button
+                type="submit"
+                disabled={badgeSaving || !newBadgeName.trim()}
+                style={{ ...mono, fontSize: "0.65rem", padding: "10px 24px", background: newBadgeName.trim() && !badgeSaving ? "var(--color-accent)" : "var(--color-bg-3)", color: newBadgeName.trim() && !badgeSaving ? "var(--color-accent-ink)" : "var(--color-faint)", border: "none", cursor: newBadgeName.trim() ? "pointer" : "not-allowed", fontWeight: 700 }}
+              >
+                {badgeSaving ? "Kaydediliyor…" : "Rozet Ekle"}
+              </button>
+            </form>
+          </div>
+
+          {/* Badge list grouped by category */}
+          {badgeTypes.length === 0 ? (
+            <div style={{ ...mono, fontSize: "0.65rem", color: "var(--color-faint)", padding: 32, textAlign: "center" }}>Henüz rozet tanımı yok</div>
+          ) : (
+            <div style={{ display: "flex", flexDirection: "column", gap: 24 }}>
+              {CATEGORY_ORDER.map(cat => {
+                const catBadges = badgeTypes.filter(b => b.category === cat)
+                if (catBadges.length === 0) return null
+                return (
+                  <div key={cat}>
+                    <div style={{ ...mono, fontSize: "0.6rem", color: "var(--color-faint)", letterSpacing: "0.2em", marginBottom: 12, display: "flex", alignItems: "center", gap: 10 }}>
+                      {CATEGORY_LABELS[cat]}
+                      <span style={{ color: "var(--color-line)", fontWeight: 400 }}>({catBadges.length})</span>
+                    </div>
+                    <div className="flex flex-wrap gap-3">
+                      {catBadges.map(b => (
+                        <div key={b.id} className="flex items-center gap-2 group">
+                          <span style={{
+                            ...mono,
+                            fontSize: "0.65rem",
+                            fontWeight: 700,
+                            padding: "5px 14px",
+                            background: b.color_to
+                              ? `linear-gradient(135deg, ${b.color_from}, ${b.color_to})`
+                              : b.color_from,
+                            color: "#fff",
+                            letterSpacing: "0.08em",
+                          }}>
+                            {b.name}
+                          </span>
+                          <button
+                            onClick={() => deleteBadgeType(b.id)}
+                            style={{ ...mono, fontSize: "0.55rem", padding: "4px 8px", background: "transparent", color: "var(--color-warn)", border: "1px solid var(--color-warn)", cursor: "pointer", opacity: 0.6 }}
+                            title="Sil"
+                          >
+                            ✕
+                          </button>
+                        </div>
+                      ))}
+                    </div>
+                  </div>
+                )
+              })}
             </div>
           )}
         </div>
