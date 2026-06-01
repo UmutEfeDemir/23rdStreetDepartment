@@ -1,4 +1,5 @@
 import { SEED_STATS, COMMAND_STAFF } from "@/lib/seed"
+import { getDiscordRoleMemberCount } from "@/lib/discord"
 import IntroAnimation from "@/components/IntroAnimation"
 import StatusRibbon from "@/components/StatusRibbon"
 import Nav from "@/components/Nav"
@@ -14,8 +15,11 @@ import ApplicationForm from "@/components/ApplicationForm"
 import JoinCTA from "@/components/JoinCTA"
 import Footer from "@/components/Footer"
 
+export const revalidate = 300
+
 export default async function Home() {
-  const stats = SEED_STATS
+  const discordCount = await getDiscordRoleMemberCount()
+  const stats = { ...SEED_STATS, activeTroopers: discordCount ?? SEED_STATS.activeTroopers }
   const commandStaff = COMMAND_STAFF
 
   return (
