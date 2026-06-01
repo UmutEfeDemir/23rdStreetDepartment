@@ -1,5 +1,6 @@
-import { SEED_STATS, COMMAND_STAFF } from "@/lib/seed"
+import { SEED_STATS } from "@/lib/seed"
 import { getDiscordRoleMemberCount } from "@/lib/discord"
+import { getDb } from "@/lib/db"
 import IntroAnimation from "@/components/IntroAnimation"
 import StatusRibbon from "@/components/StatusRibbon"
 import Nav from "@/components/Nav"
@@ -17,10 +18,47 @@ import Footer from "@/components/Footer"
 
 export const revalidate = 300
 
+interface DbOfficer {
+  id: string
+  badge_no: string
+  name: string
+  rank: string
+  unit: string
+  status: string
+  seniority_months: number
+  rank_progress: number
+  next_rank: string | null
+  is_command: boolean
+  discord_avatar: string | null
+}
+
 export default async function Home() {
   const discordCount = await getDiscordRoleMemberCount()
-  const stats = { ...SEED_STATS, activeTroopers: discordCount ?? SEED_STATS.activeTroopers }
-  const commandStaff = COMMAND_STAFF
+
+  let totalPersonnel = SEED_STATS.totalPersonnel
+  let commandOfficers: DbOfficer[] = []
+
+  try {
+    const sql = getDb()
+    const [countRow] = await sql`SELECT COUNT(*)::int AS total FROM officers_db`
+    totalPersonnel = (countRow as { total: number }).total || SEED_STATS.totalPersonnel
+
+    const rows = await sql`
+      SELECT id, badge_no, name, rank, unit, status, seniority_months, rank_progress, next_rank, is_command, discord_avatar
+      FROM officers_db
+      WHERE is_command = true
+      ORDER BY badge_no::integer ASC
+    `
+    commandOfficers = rows as DbOfficer[]
+  } catch {
+    // DB unavailable — fall back to seed
+  }
+
+  const stats = {
+    ...SEED_STATS,
+    totalPersonnel,
+    activeTroopers: discordCount ?? SEED_STATS.activeTroopers,
+  }
 
   return (
     <div style={{ position: "relative", zIndex: 1 }}>
@@ -31,7 +69,7 @@ export default async function Home() {
         <Hero />
         <Stats stats={stats} />
         <Mission />
-        <CommandSection officers={commandStaff} />
+        <CommandSection officers={commandOfficers} />
         <PersonnelSection />
         <PersonnelPanel />
         <UnitsSection />

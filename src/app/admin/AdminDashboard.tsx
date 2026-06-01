@@ -7,7 +7,7 @@ import Image from "next/image"
 import Link from "next/link"
 
 type AppStatus = "pending" | "interview" | "accepted" | "rejected"
-type Tab = "applications" | "officers" | "access" | "badges" | "announcements" | "rules" | "accounts"
+type Tab = "applications" | "officers" | "access" | "badges" | "announcements" | "ribbon" | "rules" | "accounts" | "archive"
 type AdminRole = "founder" | "moderator" | "interview"
 
 interface AccessRequest {
@@ -171,6 +171,18 @@ export default function AdminDashboard() {
   const [newAnnType, setNewAnnType] = useState<"normal" | "alert">("normal")
   const [annSaving, setAnnSaving] = useState(false)
 
+  interface RibbonMessage { id: number; message: string; type: string; created_at: string }
+  const [ribbonMessages, setRibbonMessages] = useState<RibbonMessage[]>([])
+  const [newRibbonMsg, setNewRibbonMsg] = useState("")
+  const [newRibbonType, setNewRibbonType] = useState<"normal" | "alert">("normal")
+  const [ribbonSaving, setRibbonSaving] = useState(false)
+
+  interface ArchivedApp {
+    id: string; full_name: string; discord: string; status: string; deleted_at: string; created_at: string
+  }
+  const [archivedApps, setArchivedApps] = useState<ArchivedApp[]>([])
+  const [archiveLoading, setArchiveLoading] = useState(false)
+
   const [rulesContent, setRulesContent] = useState("")
   const [rulesLoaded, setRulesLoaded] = useState(false)
   const [rulesSaving, setRulesSaving] = useState(false)
@@ -178,6 +190,7 @@ export default function AdminDashboard() {
 
   // Role / multi-admin
   const [adminRole, setAdminRole] = useState<AdminRole | null>(null)
+  const [adminDisplayName, setAdminDisplayName] = useState("")
 
   interface AdminAccount {
     id: string
@@ -202,6 +215,7 @@ export default function AdminDashboard() {
       .then((d) => {
         if (d?.role) {
           setAdminRole(d.role as AdminRole)
+          if (d.displayName) setAdminDisplayName(d.displayName)
           if (d.role === "interview") setTab("applications")
         }
       })
@@ -230,6 +244,10 @@ export default function AdminDashboard() {
       .then((r) => r.json())
       .then((d) => { if (d?.content) { setRulesContent(d.content); setRulesLoaded(true) } })
       .catch(() => {})
+    fetch("/api/ribbon-messages")
+      .then((r) => r.ok ? r.json() : [])
+      .then((d) => { setRibbonMessages(Array.isArray(d) ? d : []) })
+      .catch(() => {})
     fetch("/api/admin/accounts")
       .then((r) => r.ok ? r.json() : [])
       .then((d) => { setAccounts(Array.isArray(d) ? d : []) })
@@ -253,7 +271,7 @@ export default function AdminDashboard() {
   }
 
   const deleteApplication = async (id: string) => {
-    if (!confirm("Bu başvuruyu kalıcı olarak silmek istediğinizden emin misiniz?")) return
+    if (!confirm("Bu başvuruyu arşive taşımak istediğinizden emin misiniz?")) return
     await fetch("/api/admin/applications", { method: "DELETE", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ id }) })
     setApps((p) => p.filter((a) => a.id !== id))
     if (selected?.id === id) setSelected(null)
@@ -358,6 +376,38 @@ export default function AdminDashboard() {
     const res = await fetch("/api/rules", { method: "PATCH", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ content: rulesContent }) })
     if (res.ok) { setRulesSaved(true); setTimeout(() => window.location.reload(), 800) }
     setRulesSaving(false)
+  }
+
+  const addRibbonMessage = async (e: React.FormEvent) => {
+    e.preventDefault()
+    if (!newRibbonMsg.trim()) return
+    setRibbonSaving(true)
+    const res = await fetch("/api/ribbon-messages", { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ message: newRibbonMsg.trim(), type: newRibbonType }) })
+    if (res.ok) { const created = await res.json(); setRibbonMessages(p => [created, ...p]); setNewRibbonMsg("") }
+    setRibbonSaving(false)
+  }
+
+  const deleteRibbonMessage = async (id: number) => {
+    await fetch("/api/ribbon-messages", { method: "DELETE", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ id }) })
+    setRibbonMessages(p => p.filter(r => r.id !== id))
+  }
+
+  const loadArchive = async () => {
+    setArchiveLoading(true)
+    const res = await fetch("/api/admin/applications?deleted=1")
+    if (res.ok) { const d = await res.json(); setArchivedApps(Array.isArray(d) ? d : []) }
+    setArchiveLoading(false)
+  }
+
+  const restoreApp = async (id: string) => {
+    const res = await fetch("/api/admin/applications", { method: "PUT", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ id }) })
+    if (res.ok) { setArchivedApps(p => p.filter(a => a.id !== id)) }
+  }
+
+  const permanentDelete = async (id: string) => {
+    if (!confirm("Bu başvuruyu kalıcı olarak silmek istediğinizden emin misiniz?")) return
+    await fetch("/api/admin/applications", { method: "DELETE", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ id, permanent: true }) })
+    setArchivedApps(p => p.filter(a => a.id !== id))
   }
 
   const createAccount = async (e: React.FormEvent) => {
@@ -727,15 +777,15 @@ export default function AdminDashboard() {
 
       {/* Tabs — filtered by role */}
       <div style={{ background: "var(--color-bg-2)", borderBottom: "1px solid var(--color-line)", padding: "0 clamp(20px,4vw,48px)", display: "flex", gap: 4, overflowX: "auto" }}>
-        {(["applications", "officers", "access", "badges", "announcements", "rules", "accounts"] as Tab[])
+        {(["applications", "officers", "access", "badges", "announcements", "ribbon", "archive", "rules", "accounts"] as Tab[])
           .filter((t) => {
             if (adminRole === "interview") return t === "applications"
-            if (adminRole === "moderator") return ["applications", "access", "badges", "announcements", "rules"].includes(t)
+            if (adminRole === "moderator") return ["applications", "access", "badges", "announcements", "ribbon", "archive", "rules"].includes(t)
             return true // founder sees all
           })
           .map((t) => (
-            <button key={t} onClick={() => setTab(t)} style={{ ...mono, fontSize: "0.62rem", padding: "14px 20px", background: "transparent", border: "none", borderBottom: tab === t ? "2px solid var(--color-accent)" : "2px solid transparent", color: tab === t ? "var(--color-accent)" : "var(--color-faint)", cursor: "pointer", whiteSpace: "nowrap", flexShrink: 0 }}>
-              {t === "applications" ? `Başvurular (${apps.length})` : t === "officers" ? `Personel (${officers.length})` : t === "access" ? `Erişim (${accessRequests.filter(r => r.status === "pending").length})` : t === "badges" ? `Rozetler (${badgeTypes.length})` : t === "announcements" ? `Duyurular (${announcements.length})` : t === "rules" ? `Kurallar` : `Hesaplar (${accounts.length})`}
+            <button key={t} onClick={() => { setTab(t); if (t === "archive") loadArchive() }} style={{ ...mono, fontSize: "0.62rem", padding: "14px 20px", background: "transparent", border: "none", borderBottom: tab === t ? "2px solid var(--color-accent)" : "2px solid transparent", color: tab === t ? "var(--color-accent)" : "var(--color-faint)", cursor: "pointer", whiteSpace: "nowrap", flexShrink: 0 }}>
+              {t === "applications" ? `Başvurular (${apps.length})` : t === "officers" ? `Personel (${officers.length})` : t === "access" ? `Erişim (${accessRequests.filter(r => r.status === "pending").length})` : t === "badges" ? `Rozetler (${badgeTypes.length})` : t === "announcements" ? `Duyurular (${announcements.length})` : t === "ribbon" ? `Kayan Mesajlar (${ribbonMessages.length})` : t === "archive" ? `Arşiv (${archivedApps.length})` : t === "rules" ? `Kurallar` : `Hesaplar (${accounts.length})`}
             </button>
           ))}
       </div>
@@ -794,7 +844,7 @@ export default function AdminDashboard() {
                   {(["pending", "interview"] as AppStatus[]).map((s) => (
                     <button key={s} onClick={() => updateStatus(selected.id, s)} style={{ ...mono, fontSize: "0.62rem", padding: "9px 18px", border: `1px solid ${STATUS_COLORS[s]}`, background: selected.status === s ? STATUS_COLORS[s] : "transparent", color: selected.status === s ? "#fff" : STATUS_COLORS[s], cursor: "pointer", fontWeight: selected.status === s ? 700 : 400 }}>{STATUS_LABELS[s]}</button>
                   ))}
-                  <button onClick={() => setRejModal(selected)} style={{ ...mono, fontSize: "0.62rem", padding: "9px 18px", border: "1px solid #ef4444", background: selected.status === "rejected" ? "#ef4444" : "transparent", color: selected.status === "rejected" ? "#fff" : "#ef4444", cursor: "pointer", fontWeight: selected.status === "rejected" ? 700 : 400 }}>Red</button>
+                  <button onClick={() => { setRejModal(selected); setRejBy(adminDisplayName) }} style={{ ...mono, fontSize: "0.62rem", padding: "9px 18px", border: "1px solid #ef4444", background: selected.status === "rejected" ? "#ef4444" : "transparent", color: selected.status === "rejected" ? "#fff" : "#ef4444", cursor: "pointer", fontWeight: selected.status === "rejected" ? 700 : 400 }}>Red</button>
                   {adminRole !== "interview" && (
                     <button onClick={() => deleteApplication(selected.id)} style={{ ...mono, fontSize: "0.62rem", padding: "9px 18px", border: "1px solid var(--color-line)", background: "transparent", color: "var(--color-faint)", cursor: "pointer" }}>Sil</button>
                   )}
@@ -862,7 +912,7 @@ export default function AdminDashboard() {
                   <span style={{ ...mono, fontSize: "0.7rem", color: "var(--color-accent)" }}>{o.badge_no}</span>
                   <div>
                     <span style={{ fontFamily: "var(--font-body)", fontSize: "0.9rem", color: "var(--color-txt)", fontWeight: 500 }}>{o.name}</span>
-                    {o.is_command && <span style={{ ...mono, fontSize: "0.5rem", color: "var(--color-status-on)", marginLeft: 8 }}>HC</span>}
+                    {o.is_command && <span style={{ ...mono, fontSize: "0.5rem", color: "var(--color-status-on)", marginLeft: 8 }}>High Command</span>}
                   </div>
                   <span style={{ ...mono, fontSize: "0.58rem", color: "var(--color-faint)" }}>{o.discord_id ?? "—"}</span>
                   <span style={{ ...mono, fontSize: "0.58rem", color: "var(--color-muted)" }}>{o.rank}</span>
@@ -1198,6 +1248,125 @@ export default function AdminDashboard() {
                       style={{ ...mono, fontSize: "0.55rem", padding: "5px 10px", background: "transparent", color: "var(--color-faint)", border: "1px solid var(--color-line)", cursor: "pointer" }}
                     >
                       Sil
+                    </button>
+                  </div>
+                </div>
+              ))}
+            </div>
+          )}
+        </div>
+      )}
+
+      {/* ── Ribbon Messages tab ── */}
+      {tab === "ribbon" && (
+        <div style={{ padding: "24px clamp(20px,4vw,48px)" }}>
+          <div style={{ background: "var(--color-bg-2)", border: "1px solid var(--color-line)", padding: 24, marginBottom: 32 }}>
+            <div style={{ ...mono, fontSize: "0.65rem", color: "var(--color-accent)", marginBottom: 4 }}>Kayan Mesaj Ekle</div>
+            <div style={{ ...mono, fontSize: "0.55rem", color: "var(--color-faint)", marginBottom: 20 }}>
+              Bu mesajlar alt şeritte döngü halinde gösterilir. Aktif mesaj yoksa şerit otomatik olarak mesai bilgisine döner.
+            </div>
+            <form onSubmit={addRibbonMessage}>
+              <div className="flex flex-col gap-4 mb-4">
+                <label style={{ display: "flex", flexDirection: "column", gap: 6 }}>
+                  <span style={{ ...mono, fontSize: "0.55rem", color: "var(--color-faint)" }}>Mesaj</span>
+                  <input
+                    type="text"
+                    placeholder="örn. Tüm birimler kanal 1'e geçin"
+                    value={newRibbonMsg}
+                    onChange={(e) => setNewRibbonMsg(e.target.value)}
+                    style={{ background: "var(--color-bg)", border: "1px solid var(--color-line)", color: "var(--color-txt)", padding: "10px 14px", fontFamily: "var(--font-mono)", fontSize: "0.75rem", outline: "none" }}
+                  />
+                </label>
+                <div className="flex gap-3">
+                  {([["normal", "Normal (Altın)"], ["alert", "Uyarı (Kırmızı)"]] as const).map(([val, lbl]) => (
+                    <label key={val} className="flex items-center gap-2 cursor-pointer">
+                      <input type="radio" name="ribbon-type" value={val} checked={newRibbonType === val} onChange={() => setNewRibbonType(val)} />
+                      <span style={{ ...mono, fontSize: "0.6rem", color: val === "alert" ? "#ff4444" : "var(--color-accent)", fontWeight: newRibbonType === val ? 700 : 400 }}>{lbl}</span>
+                    </label>
+                  ))}
+                </div>
+                <div style={{ background: "oklch(0.10 0.006 70)", padding: "8px 16px", display: "flex", alignItems: "center", gap: 8 }}>
+                  <span style={{ ...mono, fontSize: "0.55rem", color: "var(--color-faint)" }}>Önizleme:</span>
+                  <span style={{ ...mono, fontSize: "0.65rem", fontWeight: 700, letterSpacing: "0.18em", color: newRibbonType === "alert" ? "#ff4444" : "var(--color-accent)", textTransform: "uppercase" }}>
+                    {newRibbonType === "alert" ? "⚠ " : "● "}{newRibbonMsg || "Kayan mesaj metni"}
+                  </span>
+                </div>
+              </div>
+              <button
+                type="submit"
+                disabled={ribbonSaving || !newRibbonMsg.trim()}
+                style={{ ...mono, fontSize: "0.65rem", padding: "10px 24px", background: newRibbonMsg.trim() && !ribbonSaving ? (newRibbonType === "alert" ? "#ff4444" : "var(--color-accent)") : "var(--color-bg-3)", color: newRibbonMsg.trim() && !ribbonSaving ? "#000" : "var(--color-faint)", border: "none", cursor: newRibbonMsg.trim() ? "pointer" : "not-allowed", fontWeight: 700 }}
+              >
+                {ribbonSaving ? "Ekleniyor…" : "Mesajı Ekle"}
+              </button>
+            </form>
+          </div>
+
+          {ribbonMessages.length === 0 ? (
+            <div style={{ ...mono, fontSize: "0.65rem", color: "var(--color-faint)", padding: 32, textAlign: "center" }}>
+              Aktif kayan mesaj yok — şerit mesai bilgisini gösteriyor
+            </div>
+          ) : (
+            <div style={{ border: "1px solid var(--color-line)" }}>
+              <div style={{ display: "grid", gridTemplateColumns: "1fr 100px 140px 60px", background: "var(--color-bg-3)", borderBottom: "1px solid var(--color-line)", padding: "10px 16px", gap: 8 }}>
+                {["Mesaj", "Tip", "Eklenme", ""].map((h, i) => (
+                  <span key={i} style={{ ...mono, fontSize: "0.55rem", color: "var(--color-faint)" }}>{h}</span>
+                ))}
+              </div>
+              {ribbonMessages.map((r) => (
+                <div key={r.id} style={{ display: "grid", gridTemplateColumns: "1fr 100px 140px 60px", padding: "12px 16px", borderBottom: "1px solid var(--color-line-soft)", alignItems: "center", gap: 8 }}>
+                  <span style={{ ...mono, fontSize: "0.65rem", color: r.type === "alert" ? "#ff4444" : "var(--color-accent)", fontWeight: 700 }}>
+                    {r.type === "alert" ? "⚠ " : "● "}{r.message}
+                  </span>
+                  <span style={{ ...mono, fontSize: "0.58rem", color: r.type === "alert" ? "#ff4444" : "var(--color-accent)" }}>
+                    {r.type === "alert" ? "Uyarı" : "Normal"}
+                  </span>
+                  <span style={{ ...mono, fontSize: "0.58rem", color: "var(--color-faint)" }}>{new Date(r.created_at).toLocaleString("tr-TR")}</span>
+                  <button onClick={() => deleteRibbonMessage(r.id)} style={{ ...mono, fontSize: "0.55rem", padding: "5px 10px", background: "transparent", color: "var(--color-warn)", border: "1px solid var(--color-warn)", cursor: "pointer" }}>Sil</button>
+                </div>
+              ))}
+            </div>
+          )}
+        </div>
+      )}
+
+      {/* ── Archive tab ── */}
+      {tab === "archive" && (
+        <div style={{ padding: "24px clamp(20px,4vw,48px)" }}>
+          <div style={{ ...mono, fontSize: "0.55rem", color: "var(--color-faint)", marginBottom: 20 }}>
+            Silinen başvurular burada saklanır. Geri yüklenebilir veya kalıcı olarak silinebilir.
+          </div>
+          {archiveLoading ? (
+            <div style={{ ...mono, fontSize: "0.65rem", color: "var(--color-faint)", padding: 32, textAlign: "center" }}>YÜKLENİYOR…</div>
+          ) : archivedApps.length === 0 ? (
+            <div style={{ ...mono, fontSize: "0.65rem", color: "var(--color-faint)", padding: 32, textAlign: "center" }}>Arşiv boş</div>
+          ) : (
+            <div style={{ border: "1px solid var(--color-line)" }}>
+              <div style={{ display: "grid", gridTemplateColumns: "1fr 140px 120px 140px 220px", background: "var(--color-bg-3)", borderBottom: "1px solid var(--color-line)", padding: "10px 16px", gap: 8 }}>
+                {["Ad Soyad", "Discord", "Durum", "Silinme Tarihi", ""].map((h, i) => (
+                  <span key={i} style={{ ...mono, fontSize: "0.55rem", color: "var(--color-faint)" }}>{h}</span>
+                ))}
+              </div>
+              {archivedApps.map((a) => (
+                <div key={a.id} style={{ display: "grid", gridTemplateColumns: "1fr 140px 120px 140px 220px", padding: "12px 16px", borderBottom: "1px solid var(--color-line-soft)", alignItems: "center", gap: 8 }}>
+                  <span style={{ fontFamily: "var(--font-body)", fontSize: "0.9rem", color: "var(--color-txt)", fontWeight: 500 }}>{a.full_name}</span>
+                  <span style={{ ...mono, fontSize: "0.58rem", color: "var(--color-faint)" }}>{a.discord}</span>
+                  <span style={{ ...mono, fontSize: "0.58rem", color: STATUS_COLORS[a.status as AppStatus] ?? "var(--color-faint)" }}>
+                    {STATUS_LABELS[a.status as AppStatus] ?? a.status}
+                  </span>
+                  <span style={{ ...mono, fontSize: "0.58rem", color: "var(--color-faint)" }}>{new Date(a.deleted_at).toLocaleDateString("tr-TR")}</span>
+                  <div className="flex gap-2 flex-wrap">
+                    <button
+                      onClick={() => restoreApp(a.id)}
+                      style={{ ...mono, fontSize: "0.55rem", padding: "5px 10px", background: "var(--color-status-on)", color: "#000", border: "none", cursor: "pointer", fontWeight: 700 }}
+                    >
+                      Geri Yükle
+                    </button>
+                    <button
+                      onClick={() => permanentDelete(a.id)}
+                      style={{ ...mono, fontSize: "0.55rem", padding: "5px 10px", background: "transparent", color: "var(--color-warn)", border: "1px solid var(--color-warn)", cursor: "pointer" }}
+                    >
+                      Kalıcı Sil
                     </button>
                   </div>
                 </div>

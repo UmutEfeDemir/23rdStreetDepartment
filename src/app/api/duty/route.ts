@@ -51,7 +51,7 @@ export async function GET() {
   `
   const logs = await sql`
     SELECT * FROM duty_logs WHERE officer_id = ${officer.id} AND clock_out IS NOT NULL
-    ORDER BY clock_in DESC LIMIT 10
+    ORDER BY clock_in DESC
   `
   const licenses = await sql`
     SELECT ol.license_type,

@@ -307,13 +307,17 @@ export default function PersonnelPanel() {
 
             {/* Right side */}
             <div className="lg:col-span-2 flex flex-col gap-6">
-              {officer && (
-                <div className="grid grid-cols-3 gap-3">
-                  <StatBox label="TOPLAM DEVRIYE" value={formatDutyTime(officer.duty_hours)} />
-                  <StatBox label="TAMAMLANAN GÖREV" value={logs.length} />
-                  <StatBox label="SON GÖREV" value={logs.length > 0 ? new Date(logs[0].clock_in).toLocaleDateString("tr-TR") : "—"} />
-                </div>
-              )}
+              {officer && (() => {
+                // 30 min = 1800 seconds (duration_minutes column actually stores seconds)
+                const validLogs = logs.filter(l => l.duration_minutes != null && l.duration_minutes >= 1800)
+                return (
+                  <div className="grid grid-cols-3 gap-3">
+                    <StatBox label="TOPLAM DEVRIYE" value={formatDutyTime(officer.duty_hours)} />
+                    <StatBox label="TAMAMLANAN DEVRİYE" value={validLogs.length} />
+                    <StatBox label="SON GÖREV" value={validLogs.length > 0 ? new Date(validLogs[0].clock_in).toLocaleDateString("tr-TR") : "—"} />
+                  </div>
+                )
+              })()}
 
               {/* Badges by category */}
               {officer && licenses.length > 0 && (() => {
@@ -367,8 +371,9 @@ export default function PersonnelPanel() {
 
               {/* Duty log */}
               <div style={{ background: "var(--color-bg-3)", border: "1px solid var(--color-line)" }}>
-                <div className="px-5 py-3" style={{ borderBottom: "1px solid var(--color-line)" }}>
+                <div className="px-5 py-3" style={{ borderBottom: "1px solid var(--color-line)", display: "flex", justifyContent: "space-between", alignItems: "center" }}>
                   <span style={{ ...mono, fontSize: "0.62rem", color: "var(--color-faint)" }}>Mesai Geçmişi</span>
+                  {logs.length > 0 && <span style={{ ...mono, fontSize: "0.52rem", color: "var(--color-faint)" }}>{logs.length} kayıt</span>}
                 </div>
                 {logs.length === 0 ? (
                   <div className="py-10 text-center" style={{ ...mono, fontSize: "0.62rem", color: "var(--color-faint)" }}>
@@ -381,13 +386,16 @@ export default function PersonnelPanel() {
                         <span key={h} style={{ ...mono, fontSize: "0.55rem", color: "var(--color-faint)" }}>{h}</span>
                       ))}
                     </div>
-                    {logs.map((log) => (
-                      <div key={log.id} style={{ display: "grid", gridTemplateColumns: "1fr 1fr 1fr", padding: "10px 20px", borderBottom: "1px solid var(--color-line-soft)" }}>
-                        <span style={{ ...mono, fontSize: "0.62rem", color: "var(--color-txt)" }}>{new Date(log.clock_in).toLocaleString("tr-TR", { dateStyle: "short", timeStyle: "short" })}</span>
-                        <span style={{ ...mono, fontSize: "0.62rem", color: "var(--color-txt)" }}>{log.clock_out ? new Date(log.clock_out).toLocaleString("tr-TR", { dateStyle: "short", timeStyle: "short" }) : "—"}</span>
-                        <span style={{ ...mono, fontSize: "0.62rem", color: "var(--color-accent)" }}>{log.duration_minutes != null ? formatDuration(log.duration_minutes) : "—"}</span>
-                      </div>
-                    ))}
+                    {/* First 10 always visible; rest in scrollable overflow */}
+                    <div style={{ maxHeight: "calc(10 * 45px)", overflowY: "auto" }}>
+                      {logs.map((log) => (
+                        <div key={log.id} style={{ display: "grid", gridTemplateColumns: "1fr 1fr 1fr", padding: "10px 20px", borderBottom: "1px solid var(--color-line-soft)" }}>
+                          <span style={{ ...mono, fontSize: "0.62rem", color: "var(--color-txt)" }}>{new Date(log.clock_in).toLocaleString("tr-TR", { dateStyle: "short", timeStyle: "short" })}</span>
+                          <span style={{ ...mono, fontSize: "0.62rem", color: "var(--color-txt)" }}>{log.clock_out ? new Date(log.clock_out).toLocaleString("tr-TR", { dateStyle: "short", timeStyle: "short" }) : "—"}</span>
+                          <span style={{ ...mono, fontSize: "0.62rem", color: "var(--color-accent)" }}>{log.duration_minutes != null ? formatDuration(log.duration_minutes) : "—"}</span>
+                        </div>
+                      ))}
+                    </div>
                   </div>
                 )}
               </div>

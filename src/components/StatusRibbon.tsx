@@ -16,32 +16,40 @@ export default function StatusRibbon() {
   const [segments, setSegments] = useState<RibbonSegment[]>(STATIC_MESSAGES)
 
   useEffect(() => {
-    const load = () => {
-      fetch("/api/status-ribbon")
-        .then((r) => r.ok ? r.json() : null)
-        .then((data) => {
-          if (!data) return
+    const load = async () => {
+      try {
+        // Fetch custom ribbon messages first
+        const [ribbonRes, dutyRes] = await Promise.all([
+          fetch("/api/ribbon-messages"),
+          fetch("/api/status-ribbon"),
+        ])
+
+        const ribbonData = ribbonRes.ok ? await ribbonRes.json() : []
+        const dutyData = dutyRes.ok ? await dutyRes.json() : null
+
+        if (Array.isArray(ribbonData) && ribbonData.length > 0) {
+          // Use only custom ribbon messages
+          setSegments(ribbonData.map((r: { message: string; type: string }) => ({
+            text: r.type === "alert" ? `⚠ ${r.message}` : `● ${r.message}`,
+            type: r.type === "alert" ? "alert" : "normal",
+          })))
+        } else if (dutyData) {
+          // Fall back to active duty info
           const segs: RibbonSegment[] = []
-
-          for (const ann of data.announcements ?? []) {
-            segs.push({ text: `⚠ ${ann.message}`, type: "alert" })
-          }
-
-          for (const o of data.activeDuty ?? []) {
+          for (const o of dutyData.activeDuty ?? []) {
             segs.push({ text: `● ${o.rank} ${o.name} (${o.badge_no}) — MESAİDE`, type: "normal" })
           }
-
-          if (segs.length === 0) {
-            setSegments(STATIC_MESSAGES)
-          } else {
-            setSegments([...segs, ...STATIC_MESSAGES])
-          }
-        })
-        .catch(() => {})
+          setSegments(segs.length > 0 ? segs : STATIC_MESSAGES)
+        } else {
+          setSegments(STATIC_MESSAGES)
+        }
+      } catch {
+        setSegments(STATIC_MESSAGES)
+      }
     }
 
     load()
-    const interval = setInterval(load, 60_000)
+    const interval = setInterval(load, 30_000)
     return () => clearInterval(interval)
   }, [])
 

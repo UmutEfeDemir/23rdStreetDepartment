@@ -39,16 +39,21 @@ async function sendDiscordNotification(discordId: string, status: string, reason
   }).catch((e) => console.error("Notify webhook error:", e))
 }
 
-export async function GET() {
+export async function GET(req: Request) {
   if (!(await isAnyAdmin())) {
     return Response.json({ error: "Yetkisiz" }, { status: 401 })
   }
+
+  const url = new URL(req.url)
+  const deleted = url.searchParams.get("deleted") === "1"
 
   if (process.env.DATABASE_URL) {
     try {
       const { getDb } = await import("@/lib/db")
       const sql = getDb()
-      const rows = await sql`SELECT * FROM applications ORDER BY created_at DESC`
+      const rows = deleted
+        ? await sql`SELECT * FROM applications WHERE deleted_at IS NOT NULL ORDER BY deleted_at DESC`
+        : await sql`SELECT * FROM applications WHERE deleted_at IS NULL ORDER BY created_at DESC`
       return Response.json(rows)
     } catch (e) {
       console.error(e)
@@ -102,14 +107,20 @@ export async function DELETE(req: NextRequest) {
     return Response.json({ error: "Yetkisiz" }, { status: 403 })
   }
 
-  const { id } = await req.json()
+  const { id, permanent } = await req.json()
   if (!id) return Response.json({ error: "ID gerekli" }, { status: 400 })
 
   if (process.env.DATABASE_URL) {
     try {
       const { getDb } = await import("@/lib/db")
       const sql = getDb()
-      await sql`DELETE FROM applications WHERE id = ${id}`
+      if (permanent) {
+        // Hard delete from archive
+        await sql`DELETE FROM applications WHERE id = ${id}`
+      } else {
+        // Soft delete — move to archive
+        await sql`UPDATE applications SET deleted_at = NOW() WHERE id = ${id}`
+      }
       return Response.json({ success: true })
     } catch (e) {
       console.error(e)
@@ -117,5 +128,26 @@ export async function DELETE(req: NextRequest) {
     }
   }
 
+  return Response.json({ success: true })
+}
+
+export async function PUT(req: NextRequest) {
+  // Restore from archive back to interview
+  if (!(await isAtLeastModerator())) {
+    return Response.json({ error: "Yetkisiz" }, { status: 403 })
+  }
+  const { id } = await req.json()
+  if (!id) return Response.json({ error: "ID gerekli" }, { status: 400 })
+  if (process.env.DATABASE_URL) {
+    try {
+      const { getDb } = await import("@/lib/db")
+      const sql = getDb()
+      await sql`UPDATE applications SET deleted_at = NULL, status = 'interview' WHERE id = ${id}`
+      return Response.json({ success: true })
+    } catch (e) {
+      console.error(e)
+      return Response.json({ error: "DB hatası" }, { status: 500 })
+    }
+  }
   return Response.json({ success: true })
 }

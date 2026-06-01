@@ -1,4 +1,7 @@
+"use client"
+
 import Image from "next/image"
+import { useState } from "react"
 
 const PHOTOS = [
   "/gallery/g01.png",
@@ -20,12 +23,52 @@ const PHOTOS = [
 ]
 
 export default function Gallery() {
+  const [lightbox, setLightbox] = useState<number | null>(null)
+
   return (
     <section
       id="gallery"
       className="section-pad"
       style={{ borderBottom: "1px solid var(--color-line)" }}
     >
+      {/* Lightbox */}
+      {lightbox !== null && (
+        <div
+          className="fixed inset-0 z-[900] flex items-center justify-center"
+          style={{ background: "oklch(0 0 0 / 0.92)" }}
+          onClick={() => setLightbox(null)}
+        >
+          <button
+            style={{ position: "absolute", left: 24, top: "50%", transform: "translateY(-50%)", background: "transparent", border: "1px solid var(--color-line)", color: "var(--color-txt)", padding: "12px 18px", cursor: "pointer", fontSize: "1.2rem", zIndex: 10 }}
+            onClick={(e) => { e.stopPropagation(); setLightbox((p) => p! > 0 ? p! - 1 : PHOTOS.length - 1) }}
+          >‹</button>
+          <div
+            style={{ position: "relative", width: "min(90vw, 1200px)", aspectRatio: "16/9" }}
+            onClick={(e) => e.stopPropagation()}
+          >
+            <Image
+              src={PHOTOS[lightbox]}
+              alt={`Saha görüntüsü ${lightbox + 1}`}
+              fill
+              style={{ objectFit: "contain" }}
+              quality={95}
+              sizes="90vw"
+            />
+          </div>
+          <button
+            style={{ position: "absolute", right: 24, top: "50%", transform: "translateY(-50%)", background: "transparent", border: "1px solid var(--color-line)", color: "var(--color-txt)", padding: "12px 18px", cursor: "pointer", fontSize: "1.2rem", zIndex: 10 }}
+            onClick={(e) => { e.stopPropagation(); setLightbox((p) => p! < PHOTOS.length - 1 ? p! + 1 : 0) }}
+          >›</button>
+          <button
+            style={{ position: "absolute", top: 20, right: 20, background: "transparent", border: "1px solid var(--color-line)", color: "var(--color-txt)", padding: "8px 14px", cursor: "pointer", fontFamily: "var(--font-mono)", fontSize: "0.7rem" }}
+            onClick={(e) => { e.stopPropagation(); setLightbox(null) }}
+          >✕ Kapat</button>
+          <div style={{ position: "absolute", bottom: 20, left: "50%", transform: "translateX(-50%)", fontFamily: "var(--font-mono)", fontSize: "0.6rem", color: "var(--color-faint)", letterSpacing: "0.14em" }}>
+            {lightbox + 1} / {PHOTOS.length}
+          </div>
+        </div>
+      )}
+
       <div className="container-max">
         <div className="kicker mb-4">06 / Galeri</div>
         <h2
@@ -51,21 +94,30 @@ export default function Gallery() {
           {PHOTOS.map((src, i) => (
             <div
               key={i}
-              className="gallery-item relative"
+              className="gallery-item relative cursor-pointer group"
               style={{
                 aspectRatio: "16/9",
                 background: "var(--color-bg-3)",
                 border: "1px solid var(--color-line)",
               }}
+              onClick={() => setLightbox(i)}
             >
               <Image
                 src={src}
                 alt={`Saha görüntüsü ${i + 1}`}
                 fill
                 sizes="25vw"
-                style={{ objectFit: "cover" }}
+                style={{ objectFit: "cover", transition: "opacity 0.2s" }}
                 quality={85}
               />
+              <div
+                className="absolute inset-0 flex items-center justify-center opacity-0 group-hover:opacity-100 transition-opacity"
+                style={{ background: "oklch(0 0 0 / 0.4)" }}
+              >
+                <span style={{ fontFamily: "var(--font-mono)", fontSize: "0.6rem", letterSpacing: "0.18em", color: "#fff", textTransform: "uppercase" }}>
+                  Büyüt
+                </span>
+              </div>
               <div
                 className="absolute top-0 left-0 w-3 h-3 z-10 pointer-events-none"
                 style={{
