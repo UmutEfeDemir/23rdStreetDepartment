@@ -2,7 +2,7 @@
 
 import { useState, useEffect } from "react"
 
-type UnitFilter = "TÜM" | "High Command" | "Supervisor" | "Polis"
+type UnitFilter = "TÜM" | "High Command" | "Sup. Command" | "Supervisor" | "Polis"
 
 interface OfficerRow {
   id: string
@@ -13,7 +13,7 @@ interface OfficerRow {
   status: string
 }
 
-const UNITS: UnitFilter[] = ["TÜM", "High Command", "Supervisor", "Polis"]
+const UNITS: UnitFilter[] = ["TÜM", "High Command", "Sup. Command", "Supervisor", "Polis"]
 
 function Monogram({ name }: { name: string }) {
   const initials = name.split(/[\s.]/).filter(Boolean).map((p) => p[0]).join("").slice(0, 2).toUpperCase()
