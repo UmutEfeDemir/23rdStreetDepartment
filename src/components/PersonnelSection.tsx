@@ -43,7 +43,7 @@ export default function PersonnelSection() {
   useEffect(() => {
     fetch("/api/officers")
       .then((r) => r.json())
-      .then((data) => setOfficers(Array.isArray(data) ? data : []))
+      .then((data) => setOfficers(Array.isArray(data) ? data.sort((a, b) => Number(a.badge_no) - Number(b.badge_no)) : []))
       .finally(() => setLoading(false))
   }, [])
 

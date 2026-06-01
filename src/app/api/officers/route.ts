@@ -9,7 +9,7 @@ async function isAdmin() {
 
 export async function GET() {
   const sql = getDb()
-  const rows = await sql`SELECT * FROM officers_db ORDER BY is_command DESC, created_at ASC`
+  const rows = await sql`SELECT * FROM officers_db ORDER BY badge_no::integer ASC`
   return Response.json(rows)
 }
 

@@ -115,7 +115,7 @@ export default function AdminDashboard() {
       .catch(() => setAppsLoading(false))
     fetch("/api/officers")
       .then((r) => r.json())
-      .then((d) => { setOfficers(Array.isArray(d) ? d : []); setOfficersLoading(false) })
+      .then((d) => { setOfficers(Array.isArray(d) ? d.sort((a, b) => Number(a.badge_no) - Number(b.badge_no)) : []); setOfficersLoading(false) })
       .catch(() => setOfficersLoading(false))
   }, [])
 
