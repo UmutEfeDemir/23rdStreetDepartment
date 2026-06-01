@@ -4,22 +4,11 @@ export type Rank =
   | "Lieutenant"
   | "Senior Sergeant"
   | "Sergeant"
-  | "Senior Officer"
-  | "Officer"
-  | "Probationary Officer"
-  | "Cadet"
-  // Türkçe rütbeler (eski uyumluluk)
-  | "Komiser"
-  | "Komiser Yardımcısı"
-  | "Yardımcı Komiser"
-  | "Başmüfettiş"
-  | "Müfettiş"
-  | "Başçavuş"
-  | "Çavuş"
-  | "Kıdemli Trooper"
+  | "Corporal"
+  | "Master Trooper"
+  | "Senior Trooper"
   | "Trooper"
-  | "Deneme Trooper"
-  | "Aday"
+  | "Cadet"
 
 export type Unit = "High Command" | "Sup. Command" | "Supervisor" | "Polis"
 
@@ -38,9 +27,10 @@ export const RANK_ORDER: Rank[] = [
   "Lieutenant",
   "Senior Sergeant",
   "Sergeant",
-  "Senior Officer",
-  "Officer",
-  "Probationary Officer",
+  "Corporal",
+  "Master Trooper",
+  "Senior Trooper",
+  "Trooper",
   "Cadet",
 ]
 
