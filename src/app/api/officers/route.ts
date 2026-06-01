@@ -1,11 +1,6 @@
-import { cookies } from "next/headers"
 import { type NextRequest } from "next/server"
 import { getDb } from "@/lib/db"
-
-async function isAdmin() {
-  const cookieStore = await cookies()
-  return cookieStore.get("admin_session")?.value === "1"
-}
+import { isFounder } from "@/lib/adminAuth"
 
 export async function GET() {
   const sql = getDb()
@@ -14,7 +9,7 @@ export async function GET() {
 }
 
 export async function POST(req: NextRequest) {
-  if (!(await isAdmin())) return Response.json({ error: "Yetkisiz" }, { status: 401 })
+  if (!(await isFounder())) return Response.json({ error: "Yetkisiz" }, { status: 403 })
   const body = await req.json()
   const { discord_id, badge_no, name, rank, unit, status, seniority_months, rank_progress, next_rank, is_command } = body
   if (!badge_no || !name || !rank || !unit) {
@@ -31,7 +26,7 @@ export async function POST(req: NextRequest) {
 }
 
 export async function PATCH(req: NextRequest) {
-  if (!(await isAdmin())) return Response.json({ error: "Yetkisiz" }, { status: 401 })
+  if (!(await isFounder())) return Response.json({ error: "Yetkisiz" }, { status: 403 })
   const body = await req.json()
   const { id, reset_duty_hours } = body
   if (!id) return Response.json({ error: "ID gerekli" }, { status: 400 })
@@ -63,7 +58,7 @@ export async function PATCH(req: NextRequest) {
 }
 
 export async function DELETE(req: NextRequest) {
-  if (!(await isAdmin())) return Response.json({ error: "Yetkisiz" }, { status: 401 })
+  if (!(await isFounder())) return Response.json({ error: "Yetkisiz" }, { status: 403 })
   const { id } = await req.json()
   if (!id) return Response.json({ error: "ID gerekli" }, { status: 400 })
   const sql = getDb()

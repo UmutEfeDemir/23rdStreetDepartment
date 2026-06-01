@@ -1,12 +1,7 @@
 import { auth } from "@/auth"
-import { cookies } from "next/headers"
 import { type NextRequest } from "next/server"
 import { getDb } from "@/lib/db"
-
-async function isAdmin() {
-  const cookieStore = await cookies()
-  return cookieStore.get("admin_session")?.value === "1"
-}
+import { isAtLeastModerator } from "@/lib/adminAuth"
 
 export async function POST() {
   const session = await auth()
@@ -28,14 +23,14 @@ export async function POST() {
 }
 
 export async function GET() {
-  if (!(await isAdmin())) return Response.json({ error: "Yetkisiz" }, { status: 401 })
+  if (!(await isAtLeastModerator())) return Response.json({ error: "Yetkisiz" }, { status: 403 })
   const sql = getDb()
   const rows = await sql`SELECT * FROM access_requests ORDER BY created_at DESC`
   return Response.json(rows)
 }
 
 export async function PATCH(req: NextRequest) {
-  if (!(await isAdmin())) return Response.json({ error: "Yetkisiz" }, { status: 401 })
+  if (!(await isAtLeastModerator())) return Response.json({ error: "Yetkisiz" }, { status: 403 })
   const { id, status } = await req.json()
   if (!id || !status) return Response.json({ error: "Eksik alan" }, { status: 400 })
   const sql = getDb()
@@ -44,7 +39,7 @@ export async function PATCH(req: NextRequest) {
 }
 
 export async function DELETE(req: NextRequest) {
-  if (!(await isAdmin())) return Response.json({ error: "Yetkisiz" }, { status: 401 })
+  if (!(await isAtLeastModerator())) return Response.json({ error: "Yetkisiz" }, { status: 403 })
   const { id } = await req.json()
   const sql = getDb()
   const rows = await sql`SELECT discord_id FROM access_requests WHERE id = ${id} LIMIT 1`

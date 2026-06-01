@@ -7,7 +7,8 @@ import Image from "next/image"
 import Link from "next/link"
 
 type AppStatus = "pending" | "interview" | "accepted" | "rejected"
-type Tab = "applications" | "officers" | "access" | "badges" | "announcements" | "rules"
+type Tab = "applications" | "officers" | "access" | "badges" | "announcements" | "rules" | "accounts"
+type AdminRole = "founder" | "moderator" | "interview"
 
 interface AccessRequest {
   id: string
@@ -175,9 +176,36 @@ export default function AdminDashboard() {
   const [rulesSaving, setRulesSaving] = useState(false)
   const [rulesSaved, setRulesSaved] = useState(false)
 
+  // Role / multi-admin
+  const [adminRole, setAdminRole] = useState<AdminRole | null>(null)
+
+  interface AdminAccount {
+    id: string
+    username: string
+    role: string
+    created_by: string
+    created_at: string
+    is_active: boolean
+  }
+  const [accounts, setAccounts] = useState<AdminAccount[]>([])
+  const [newAccUsername, setNewAccUsername] = useState("")
+  const [newAccPassword, setNewAccPassword] = useState("")
+  const [newAccRole, setNewAccRole] = useState<"moderator" | "interview">("moderator")
+  const [accSaving, setAccSaving] = useState(false)
+  const [accError, setAccError] = useState("")
+
   const router = useRouter()
 
   useEffect(() => {
+    fetch("/api/admin/me")
+      .then((r) => r.ok ? r.json() : null)
+      .then((d) => {
+        if (d?.role) {
+          setAdminRole(d.role as AdminRole)
+          if (d.role === "interview") setTab("applications")
+        }
+      })
+      .catch(() => {})
     fetch("/api/admin/applications")
       .then((r) => r.json())
       .then((d) => { setApps(Array.isArray(d) ? d : []); setAppsLoading(false) })
@@ -201,6 +229,10 @@ export default function AdminDashboard() {
     fetch("/api/rules")
       .then((r) => r.json())
       .then((d) => { if (d?.content) { setRulesContent(d.content); setRulesLoaded(true) } })
+      .catch(() => {})
+    fetch("/api/admin/accounts")
+      .then((r) => r.ok ? r.json() : [])
+      .then((d) => { setAccounts(Array.isArray(d) ? d : []) })
       .catch(() => {})
   }, [])
 
@@ -326,6 +358,33 @@ export default function AdminDashboard() {
     const res = await fetch("/api/rules", { method: "PATCH", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ content: rulesContent }) })
     if (res.ok) { setRulesSaved(true); setTimeout(() => window.location.reload(), 800) }
     setRulesSaving(false)
+  }
+
+  const createAccount = async (e: React.FormEvent) => {
+    e.preventDefault()
+    if (!newAccUsername.trim() || newAccPassword.length < 6) { setAccError("Kullanıcı adı ve en az 6 karakterli şifre gerekli"); return }
+    setAccSaving(true); setAccError("")
+    const res = await fetch("/api/admin/accounts", { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ username: newAccUsername.trim(), password: newAccPassword, role: newAccRole }) })
+    if (res.ok) {
+      const created = await res.json()
+      setAccounts(p => [...p, created])
+      setNewAccUsername(""); setNewAccPassword("")
+    } else {
+      const d = await res.json().catch(() => ({}))
+      setAccError(d.error ?? "Hata oluştu")
+    }
+    setAccSaving(false)
+  }
+
+  const toggleAccount = async (id: string, is_active: boolean) => {
+    const res = await fetch("/api/admin/accounts", { method: "PATCH", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ id, is_active }) })
+    if (res.ok) { const updated = await res.json(); setAccounts(p => p.map(a => a.id === id ? updated : a)) }
+  }
+
+  const deleteAccount = async (id: string, username: string) => {
+    if (!confirm(`"${username}" hesabını silmek istediğinizden emin misiniz?`)) return
+    await fetch("/api/admin/accounts", { method: "DELETE", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ id }) })
+    setAccounts(p => p.filter(a => a.id !== id))
   }
 
   const resetDutyHours = async (officerId: string, officerName: string) => {
@@ -629,8 +688,18 @@ export default function AdminDashboard() {
           </div>
         </div>
 
-        {/* Discord profile + logout */}
+        {/* Discord profile + role + logout */}
         <div className="flex items-center gap-4">
+          {adminRole && (
+            <span style={{
+              ...mono, fontSize: "0.52rem", padding: "4px 10px",
+              border: `1px solid ${adminRole === "founder" ? "var(--color-accent)" : adminRole === "moderator" ? "oklch(0.72 0.16 230)" : "var(--color-status-on)"}`,
+              color: adminRole === "founder" ? "var(--color-accent)" : adminRole === "moderator" ? "oklch(0.72 0.16 230)" : "var(--color-status-on)",
+              background: "transparent",
+            }}>
+              {adminRole === "founder" ? "● Kurucu" : adminRole === "moderator" ? "● Moderatör" : "● Mülakat"}
+            </span>
+          )}
           {session?.user ? (
             <div className="flex items-center gap-3">
               {session.user.image ? (
@@ -656,13 +725,19 @@ export default function AdminDashboard() {
         </div>
       </header>
 
-      {/* Tabs */}
-      <div style={{ background: "var(--color-bg-2)", borderBottom: "1px solid var(--color-line)", padding: "0 clamp(20px,4vw,48px)", display: "flex", gap: 4 }}>
-        {(["applications", "officers", "access", "badges", "announcements", "rules"] as Tab[]).map((t) => (
-          <button key={t} onClick={() => setTab(t)} style={{ ...mono, fontSize: "0.62rem", padding: "14px 20px", background: "transparent", border: "none", borderBottom: tab === t ? "2px solid var(--color-accent)" : "2px solid transparent", color: tab === t ? "var(--color-accent)" : "var(--color-faint)", cursor: "pointer" }}>
-            {t === "applications" ? `Başvurular (${apps.length})` : t === "officers" ? `Personel (${officers.length})` : t === "access" ? `Erişim (${accessRequests.filter(r => r.status === "pending").length})` : t === "badges" ? `Rozetler (${badgeTypes.length})` : t === "announcements" ? `Duyurular (${announcements.length})` : `Kurallar`}
-          </button>
-        ))}
+      {/* Tabs — filtered by role */}
+      <div style={{ background: "var(--color-bg-2)", borderBottom: "1px solid var(--color-line)", padding: "0 clamp(20px,4vw,48px)", display: "flex", gap: 4, overflowX: "auto" }}>
+        {(["applications", "officers", "access", "badges", "announcements", "rules", "accounts"] as Tab[])
+          .filter((t) => {
+            if (adminRole === "interview") return t === "applications"
+            if (adminRole === "moderator") return ["applications", "access", "badges", "announcements", "rules"].includes(t)
+            return true // founder sees all
+          })
+          .map((t) => (
+            <button key={t} onClick={() => setTab(t)} style={{ ...mono, fontSize: "0.62rem", padding: "14px 20px", background: "transparent", border: "none", borderBottom: tab === t ? "2px solid var(--color-accent)" : "2px solid transparent", color: tab === t ? "var(--color-accent)" : "var(--color-faint)", cursor: "pointer", whiteSpace: "nowrap", flexShrink: 0 }}>
+              {t === "applications" ? `Başvurular (${apps.length})` : t === "officers" ? `Personel (${officers.length})` : t === "access" ? `Erişim (${accessRequests.filter(r => r.status === "pending").length})` : t === "badges" ? `Rozetler (${badgeTypes.length})` : t === "announcements" ? `Duyurular (${announcements.length})` : t === "rules" ? `Kurallar` : `Hesaplar (${accounts.length})`}
+            </button>
+          ))}
       </div>
 
       {/* ── Applications tab ── */}
@@ -720,7 +795,9 @@ export default function AdminDashboard() {
                     <button key={s} onClick={() => updateStatus(selected.id, s)} style={{ ...mono, fontSize: "0.62rem", padding: "9px 18px", border: `1px solid ${STATUS_COLORS[s]}`, background: selected.status === s ? STATUS_COLORS[s] : "transparent", color: selected.status === s ? "#fff" : STATUS_COLORS[s], cursor: "pointer", fontWeight: selected.status === s ? 700 : 400 }}>{STATUS_LABELS[s]}</button>
                   ))}
                   <button onClick={() => setRejModal(selected)} style={{ ...mono, fontSize: "0.62rem", padding: "9px 18px", border: "1px solid #ef4444", background: selected.status === "rejected" ? "#ef4444" : "transparent", color: selected.status === "rejected" ? "#fff" : "#ef4444", cursor: "pointer", fontWeight: selected.status === "rejected" ? 700 : 400 }}>Red</button>
-                  <button onClick={() => deleteApplication(selected.id)} style={{ ...mono, fontSize: "0.62rem", padding: "9px 18px", border: "1px solid var(--color-line)", background: "transparent", color: "var(--color-faint)", cursor: "pointer" }}>Sil</button>
+                  {adminRole !== "interview" && (
+                    <button onClick={() => deleteApplication(selected.id)} style={{ ...mono, fontSize: "0.62rem", padding: "9px 18px", border: "1px solid var(--color-line)", background: "transparent", color: "var(--color-faint)", cursor: "pointer" }}>Sil</button>
+                  )}
                 </div>
               </div>
 
@@ -1019,6 +1096,112 @@ export default function AdminDashboard() {
                   </div>
                 )
               })}
+            </div>
+          )}
+        </div>
+      )}
+
+      {/* ── Accounts tab (founder only) ── */}
+      {tab === "accounts" && adminRole === "founder" && (
+        <div style={{ padding: "24px clamp(20px,4vw,48px)" }}>
+          {/* Create account form */}
+          <div style={{ background: "var(--color-bg-2)", border: "1px solid var(--color-line)", padding: 24, marginBottom: 32 }}>
+            <div style={{ ...mono, fontSize: "0.65rem", color: "var(--color-accent)", marginBottom: 20 }}>Yeni Admin Hesabı Oluştur</div>
+            <form onSubmit={createAccount}>
+              <div className="grid grid-cols-1 md:grid-cols-3 gap-4 mb-4">
+                <label style={{ display: "flex", flexDirection: "column", gap: 6 }}>
+                  <span style={{ ...mono, fontSize: "0.55rem", color: "var(--color-faint)" }}>Kullanıcı Adı</span>
+                  <input
+                    type="text"
+                    value={newAccUsername}
+                    onChange={(e) => setNewAccUsername(e.target.value)}
+                    placeholder="örn. john_mod"
+                    style={{ background: "var(--color-bg)", border: "1px solid var(--color-line)", color: "var(--color-txt)", padding: "8px 12px", fontFamily: "var(--font-mono)", fontSize: "0.75rem", outline: "none" }}
+                  />
+                </label>
+                <label style={{ display: "flex", flexDirection: "column", gap: 6 }}>
+                  <span style={{ ...mono, fontSize: "0.55rem", color: "var(--color-faint)" }}>Şifre (en az 6 karakter)</span>
+                  <input
+                    type="password"
+                    value={newAccPassword}
+                    onChange={(e) => setNewAccPassword(e.target.value)}
+                    placeholder="••••••••"
+                    style={{ background: "var(--color-bg)", border: "1px solid var(--color-line)", color: "var(--color-txt)", padding: "8px 12px", fontFamily: "var(--font-mono)", fontSize: "0.75rem", outline: "none" }}
+                  />
+                </label>
+                <label style={{ display: "flex", flexDirection: "column", gap: 6 }}>
+                  <span style={{ ...mono, fontSize: "0.55rem", color: "var(--color-faint)" }}>Yetki Seviyesi</span>
+                  <select
+                    value={newAccRole}
+                    onChange={(e) => setNewAccRole(e.target.value as "moderator" | "interview")}
+                    style={{ background: "var(--color-bg)", border: "1px solid var(--color-line)", color: "var(--color-txt)", padding: "8px 12px", fontFamily: "var(--font-mono)", fontSize: "0.75rem", outline: "none" }}
+                  >
+                    <option value="moderator">Moderatör — Memur hariç tüm işlemler</option>
+                    <option value="interview">Mülakat — Yalnızca başvuru sayfası</option>
+                  </select>
+                </label>
+              </div>
+              {accError && (
+                <div style={{ ...mono, fontSize: "0.6rem", color: "var(--color-warn)", marginBottom: 12, padding: "8px 12px", border: "1px solid var(--color-warn)", background: "oklch(0.2 0.08 30 / 0.3)" }}>
+                  ✕ {accError}
+                </div>
+              )}
+              <button
+                type="submit"
+                disabled={accSaving}
+                style={{ ...mono, fontSize: "0.65rem", padding: "10px 24px", background: !accSaving ? "var(--color-accent)" : "var(--color-bg-3)", color: !accSaving ? "var(--color-accent-ink)" : "var(--color-faint)", border: "none", cursor: "pointer", fontWeight: 700 }}
+              >
+                {accSaving ? "Oluşturuluyor…" : "Hesap Oluştur"}
+              </button>
+            </form>
+          </div>
+
+          {/* Account list */}
+          {accounts.length === 0 ? (
+            <div style={{ ...mono, fontSize: "0.65rem", color: "var(--color-faint)", padding: 32, textAlign: "center" }}>
+              Henüz alt hesap oluşturulmamış
+            </div>
+          ) : (
+            <div style={{ border: "1px solid var(--color-line)" }}>
+              <div style={{ display: "grid", gridTemplateColumns: "1fr 160px 120px 140px 200px", background: "var(--color-bg-3)", borderBottom: "1px solid var(--color-line)", padding: "10px 16px", gap: 8 }}>
+                {["Kullanıcı Adı", "Yetki", "Durum", "Oluşturulma", ""].map((h, i) => (
+                  <span key={i} style={{ ...mono, fontSize: "0.55rem", color: "var(--color-faint)" }}>{h}</span>
+                ))}
+              </div>
+              {accounts.map((acc) => (
+                <div key={acc.id} style={{ display: "grid", gridTemplateColumns: "1fr 160px 120px 140px 200px", padding: "12px 16px", borderBottom: "1px solid var(--color-line-soft)", alignItems: "center", gap: 8 }}>
+                  <span style={{ fontFamily: "var(--font-body)", fontSize: "0.9rem", fontWeight: 600, color: "var(--color-txt)" }}>{acc.username}</span>
+                  <span style={{
+                    ...mono, fontSize: "0.58rem",
+                    color: acc.role === "moderator" ? "oklch(0.72 0.16 230)" : "var(--color-status-on)",
+                    border: `1px solid ${acc.role === "moderator" ? "oklch(0.72 0.16 230)" : "var(--color-status-on)"}`,
+                    padding: "3px 8px",
+                    display: "inline-block",
+                  }}>
+                    {acc.role === "moderator" ? "Moderatör" : "Mülakat"}
+                  </span>
+                  <span style={{ ...mono, fontSize: "0.58rem", color: acc.is_active ? "var(--color-status-on)" : "var(--color-warn)" }}>
+                    {acc.is_active ? "● Aktif" : "● Pasif"}
+                  </span>
+                  <span style={{ ...mono, fontSize: "0.58rem", color: "var(--color-faint)" }}>
+                    {new Date(acc.created_at).toLocaleDateString("tr-TR")}
+                  </span>
+                  <div className="flex gap-2 flex-wrap">
+                    <button
+                      onClick={() => toggleAccount(acc.id, !acc.is_active)}
+                      style={{ ...mono, fontSize: "0.55rem", padding: "5px 10px", background: "transparent", color: acc.is_active ? "var(--color-warn)" : "var(--color-status-on)", border: `1px solid ${acc.is_active ? "var(--color-warn)" : "var(--color-status-on)"}`, cursor: "pointer" }}
+                    >
+                      {acc.is_active ? "Devre Dışı" : "Etkinleştir"}
+                    </button>
+                    <button
+                      onClick={() => deleteAccount(acc.id, acc.username)}
+                      style={{ ...mono, fontSize: "0.55rem", padding: "5px 10px", background: "transparent", color: "var(--color-faint)", border: "1px solid var(--color-line)", cursor: "pointer" }}
+                    >
+                      Sil
+                    </button>
+                  </div>
+                </div>
+              ))}
             </div>
           )}
         </div>

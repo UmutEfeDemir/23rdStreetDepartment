@@ -5,6 +5,7 @@ import { useRouter } from "next/navigation"
 import Image from "next/image"
 
 export default function AdminLoginPage() {
+  const [username, setUsername] = useState("")
   const [password, setPassword] = useState("")
   const [error, setError] = useState("")
   const [loading, setLoading] = useState(false)
@@ -18,15 +19,41 @@ export default function AdminLoginPage() {
     const res = await fetch("/api/admin/login", {
       method: "POST",
       headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({ password }),
+      body: JSON.stringify({ username: username.trim() || undefined, password }),
     })
 
     if (res.ok) {
       router.push("/admin")
     } else {
-      setError("Şifre hatalı")
+      const data = await res.json().catch(() => ({}))
+      setError(data.error ?? "Giriş başarısız")
     }
     setLoading(false)
+  }
+
+  const mono: React.CSSProperties = {
+    fontFamily: "var(--font-mono)",
+    letterSpacing: "0.18em",
+    textTransform: "uppercase",
+  }
+
+  const fieldStyle: React.CSSProperties = {
+    width: "100%",
+    padding: "10px 14px",
+    background: "var(--color-bg-3)",
+    border: "1px solid var(--color-line)",
+    color: "var(--color-txt)",
+    fontFamily: "var(--font-mono)",
+    fontSize: "0.9rem",
+    outline: "none",
+  }
+
+  const labelStyle: React.CSSProperties = {
+    ...mono,
+    fontSize: "0.6rem",
+    color: "var(--color-muted)",
+    display: "block",
+    marginBottom: 6,
   }
 
   return (
@@ -41,7 +68,6 @@ export default function AdminLoginPage() {
           border: "1px solid var(--color-line)",
         }}
       >
-        {/* Logo + başlık */}
         <div className="flex flex-col items-center gap-3 mb-8">
           <Image src="/logo.png" alt="Logo" width={72} height={72} className="rounded-full" />
           <div
@@ -57,60 +83,39 @@ export default function AdminLoginPage() {
           >
             Admin Paneli
           </div>
-          <div
-            style={{
-              fontFamily: "var(--font-mono)",
-              fontSize: "0.6rem",
-              letterSpacing: "0.18em",
-              color: "var(--color-accent)",
-              textTransform: "uppercase",
-            }}
-          >
+          <div style={{ ...mono, fontSize: "0.6rem", color: "var(--color-accent)" }}>
             23rd Street Department
           </div>
         </div>
 
         <form onSubmit={handleSubmit} className="flex flex-col gap-4">
           <div>
-            <label
-              style={{
-                fontFamily: "var(--font-mono)",
-                fontSize: "0.6rem",
-                letterSpacing: "0.18em",
-                textTransform: "uppercase",
-                color: "var(--color-muted)",
-                display: "block",
-                marginBottom: 6,
-              }}
-            >
-              Şifre
-            </label>
+            <label style={labelStyle}>Kullanıcı Adı</label>
+            <input
+              type="text"
+              value={username}
+              onChange={(e) => setUsername(e.target.value)}
+              placeholder="Kurucu girişi için boş bırakın"
+              style={fieldStyle}
+              autoComplete="username"
+            />
+            <p style={{ ...mono, fontSize: "0.52rem", color: "var(--color-faint)", marginTop: 5, textTransform: "none", letterSpacing: "0.06em" }}>
+              Alt hesap için kullanıcı adı girin. Kurucu girişi için boş bırakın.
+            </p>
+          </div>
+
+          <div>
+            <label style={labelStyle}>Şifre</label>
             <input
               type="password"
               value={password}
               onChange={(e) => setPassword(e.target.value)}
-              autoFocus
-              style={{
-                width: "100%",
-                padding: "10px 14px",
-                background: "var(--color-bg-3)",
-                border: "1px solid var(--color-line)",
-                color: "var(--color-txt)",
-                fontFamily: "var(--font-mono)",
-                fontSize: "0.9rem",
-                outline: "none",
-              }}
+              autoFocus={false}
+              style={fieldStyle}
+              autoComplete="current-password"
             />
             {error && (
-              <p
-                style={{
-                  fontFamily: "var(--font-mono)",
-                  fontSize: "0.6rem",
-                  letterSpacing: "0.1em",
-                  color: "var(--color-warn)",
-                  marginTop: 6,
-                }}
-              >
+              <p style={{ ...mono, fontSize: "0.6rem", color: "var(--color-warn)", marginTop: 6, textTransform: "none", letterSpacing: "0.08em" }}>
                 {error}
               </p>
             )}

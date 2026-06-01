@@ -1,10 +1,5 @@
-import { cookies } from "next/headers"
 import { type NextRequest } from "next/server"
-
-async function isAdmin() {
-  const cookieStore = await cookies()
-  return cookieStore.get("admin_session")?.value === "1"
-}
+import { isAnyAdmin, isAtLeastModerator } from "@/lib/adminAuth"
 
 async function sendDiscordNotification(discordId: string, status: string, reason?: string, rejectedBy?: string) {
   const webhookUrl = process.env.DISCORD_NOTIFY_WEBHOOK_URL
@@ -45,7 +40,7 @@ async function sendDiscordNotification(discordId: string, status: string, reason
 }
 
 export async function GET() {
-  if (!(await isAdmin())) {
+  if (!(await isAnyAdmin())) {
     return Response.json({ error: "Yetkisiz" }, { status: 401 })
   }
 
@@ -64,7 +59,7 @@ export async function GET() {
 }
 
 export async function PATCH(req: NextRequest) {
-  if (!(await isAdmin())) {
+  if (!(await isAnyAdmin())) {
     return Response.json({ error: "Yetkisiz" }, { status: 401 })
   }
 
@@ -86,7 +81,6 @@ export async function PATCH(req: NextRequest) {
         WHERE id = ${id}
       `
 
-      // Send Discord notification for interview or rejection
       if (status === "interview" || status === "rejected") {
         const rows = await sql`SELECT discord_id FROM applications WHERE id = ${id} LIMIT 1`
         const discordId = (rows[0] as { discord_id?: string } | undefined)?.discord_id ?? ""
@@ -104,8 +98,8 @@ export async function PATCH(req: NextRequest) {
 }
 
 export async function DELETE(req: NextRequest) {
-  if (!(await isAdmin())) {
-    return Response.json({ error: "Yetkisiz" }, { status: 401 })
+  if (!(await isAtLeastModerator())) {
+    return Response.json({ error: "Yetkisiz" }, { status: 403 })
   }
 
   const { id } = await req.json()

@@ -243,12 +243,9 @@ export default function ApplicationForm() {
                 {/* Step 0 */}
                 {step === 0 && (
                   <div className="flex flex-col gap-5">
-                    <div style={{ padding: "8px 12px", border: "1px solid #ef4444", background: "oklch(0.18 0.06 30 / 0.3)" }}>
-                      <span style={{ fontFamily: "var(--font-mono)", fontSize: "0.6rem", letterSpacing: "0.14em", textTransform: "uppercase", color: "#ef4444", fontWeight: 700 }}>
-                        ⚠ OOC Bilgilerini Yazınız
-                      </span>
-                      <span style={{ fontFamily: "var(--font-mono)", fontSize: "0.58rem", color: "oklch(0.65 0.04 30)", letterSpacing: "0.08em", marginLeft: 8 }}>
-                        — Gerçek bilgilerinizi girin, karakter bilgisi değil
+                    <div style={{ padding: "18px 20px", border: "2px solid #ef4444", background: "oklch(0.14 0.04 30 / 0.5)", display: "flex", alignItems: "center", justifyContent: "center" }}>
+                      <span style={{ fontFamily: "var(--font-mono)", fontSize: "0.9rem", letterSpacing: "0.2em", textTransform: "uppercase", color: "#ef4444", fontWeight: 700 }}>
+                        OOC BİLGİLER
                       </span>
                     </div>
                     <div>
@@ -275,7 +272,7 @@ export default function ApplicationForm() {
                     <div>
                       <label style={labelStyle}>Discord ID</label>
                       <input {...register("discordId")} style={fieldStyle} placeholder="123456789012345678" />
-                      <p style={{ ...errorStyle, color: "var(--color-faint)", marginTop: 4 }}>
+                      <p style={{ ...errorStyle, color: "#22c55e", marginTop: 4 }}>
                         Ayarlar → Gelişmiş → Geliştirici Modu açıp adına sağ tıkla → ID Kopyala
                       </p>
                       {errors.discordId && <p style={errorStyle}>{errors.discordId.message}</p>}

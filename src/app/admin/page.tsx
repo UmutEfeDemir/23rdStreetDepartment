@@ -4,9 +4,14 @@ import AdminDashboard from "./AdminDashboard"
 
 export default async function AdminPage() {
   const cookieStore = await cookies()
-  const isAdmin = cookieStore.get("admin_session")?.value === "1"
+  const session = cookieStore.get("admin_session")?.value
 
-  if (!isAdmin) {
+  const isLoggedIn =
+    session === "founder" ||
+    session === "1" ||
+    (typeof session === "string" && session.startsWith("acc_"))
+
+  if (!isLoggedIn) {
     redirect("/admin/login")
   }
 

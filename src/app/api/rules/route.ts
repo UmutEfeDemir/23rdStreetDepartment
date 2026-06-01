@@ -1,17 +1,12 @@
-import { cookies } from "next/headers"
 import { type NextRequest } from "next/server"
 import { getDb } from "@/lib/db"
+import { isAtLeastModerator } from "@/lib/adminAuth"
 
 const DEFAULT_RULES = `• Tüm oyun içi talimatlara uyulması zorunludur.
 • Saygısızlık ve kuraldışı davranış tolere edilmez.
 • Üniforma ve ekipman yönetmeliğine uyulacaktır.
 • Gizlilik anlaşması imzalanacaktır.
 • Deneme sürecinde görev başarısı değerlendirilir.`
-
-async function isAdmin() {
-  const cookieStore = await cookies()
-  return cookieStore.get("admin_session")?.value === "1"
-}
 
 export async function GET() {
   try {
@@ -24,7 +19,7 @@ export async function GET() {
 }
 
 export async function PATCH(req: NextRequest) {
-  if (!(await isAdmin())) return Response.json({ error: "Yetkisiz" }, { status: 401 })
+  if (!(await isAtLeastModerator())) return Response.json({ error: "Yetkisiz" }, { status: 403 })
   const { content } = await req.json()
   if (typeof content !== "string") return Response.json({ error: "Geçersiz içerik" }, { status: 400 })
   const sql = getDb()
