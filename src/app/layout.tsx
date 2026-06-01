@@ -22,9 +22,8 @@ const jetbrainsMono = JetBrains_Mono({
 })
 
 export const metadata: Metadata = {
-  title: "23rd Street Department | San Andreas State Police",
-  description:
-    "San Andreas Eyalet Polisi – 23rd Street Departmanı. Koru ve Hizmet Et.",
+  title: "23rd Street Department",
+  description: "23rd Street Departmanı. Koru ve Hizmet Et.",
   keywords: "FiveM, GTA RP, SASP, San Andreas, polis, roleplay",
 }
 
