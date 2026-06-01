@@ -25,9 +25,22 @@ async function getSession(): Promise<SessionResult | null> {
     try {
       const { getDb } = await import("@/lib/db")
       const sql = getDb()
-      const rows = await sql`SELECT role, is_active, permissions FROM admin_accounts WHERE id = ${id} LIMIT 1`
-      const acc = rows[0] as { role: AdminRole; is_active: boolean; permissions?: Record<string, boolean> } | undefined
-      if (acc?.is_active) return { role: acc.role, accountId: id, permissions: acc.permissions ?? {} }
+      const rows = await sql`
+        SELECT a.role, a.is_active, a.permissions, a.role_id, r.permissions AS role_permissions
+        FROM admin_accounts a
+        LEFT JOIN admin_roles r ON r.id = a.role_id
+        WHERE a.id = ${id} LIMIT 1
+      `
+      const acc = rows[0] as {
+        role: AdminRole; is_active: boolean;
+        permissions?: Record<string, boolean>;
+        role_id?: number;
+        role_permissions?: Record<string, boolean>;
+      } | undefined
+      if (!acc?.is_active) return null
+      // If a custom role is assigned, its permissions take precedence
+      const perms = acc.role_id && acc.role_permissions ? acc.role_permissions : (acc.permissions ?? {})
+      return { role: acc.role, accountId: id, permissions: perms }
     } catch {}
     return null
   }

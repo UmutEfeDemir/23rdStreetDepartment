@@ -25,6 +25,18 @@ export default function Gallery() {
       .catch(() => {})
   }, [])
 
+  useEffect(() => {
+    if (lightbox === null || photos.length === 0) return
+    const preload = [
+      (lightbox + 1) % photos.length,
+      lightbox > 0 ? lightbox - 1 : photos.length - 1,
+    ]
+    preload.forEach((i) => {
+      const img = new window.Image()
+      img.src = photos[i]
+    })
+  }, [lightbox, photos])
+
   return (
     <section
       id="gallery"
@@ -47,10 +59,11 @@ export default function Gallery() {
             onClick={(e) => e.stopPropagation()}
           >
             <Image
+              key={lightbox}
               src={photos[lightbox]}
               alt={`Saha görüntüsü ${lightbox + 1}`}
               fill
-              style={{ objectFit: "contain" }}
+              style={{ objectFit: "contain", animation: "lb-fade 0.18s ease" }}
               quality={95}
               sizes="90vw"
             />

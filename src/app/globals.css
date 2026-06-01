@@ -256,3 +256,5 @@ html.intro-lock { overflow: hidden; }
   .intro-logo-img { animation: introMeta .4s ease forwards; transform: none; }
   .intro-grid, .intro-scan { animation: none; }
 }
+
+@keyframes lb-fade { from { opacity: 0 } to { opacity: 1 } }

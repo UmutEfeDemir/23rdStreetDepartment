@@ -49,6 +49,7 @@ export async function GET() {
   if (!officers.length) return Response.json({ officer: null, activeDuty: null, logs: [], licenses: [], accessStatus, userPermissions })
 
   const officer = officers[0]
+  sql`UPDATE officers_db SET last_seen = NOW() WHERE id = ${officer.id}`.catch(() => {})
   const activeDuty = await sql`
     SELECT * FROM duty_logs WHERE officer_id = ${officer.id} AND clock_out IS NULL ORDER BY clock_in DESC LIMIT 1
   `

@@ -7,7 +7,7 @@ import Image from "next/image"
 import Link from "next/link"
 
 type AppStatus = "pending" | "interview" | "accepted" | "rejected"
-type Tab = "applications" | "officers" | "access" | "badges" | "announcements" | "ribbon" | "gallery" | "rules" | "accounts" | "archive"
+type Tab = "applications" | "officers" | "access" | "badges" | "announcements" | "ribbon" | "gallery" | "rules" | "accounts" | "archive" | "roles"
 type AdminRole = "founder" | "moderator" | "interview"
 
 interface AccessRequest {
@@ -89,6 +89,13 @@ const emptyForm = { discord_id: "", discord_avatar: "", badge_no: "", name: "", 
 type OfficerForm = typeof emptyForm
 
 const mono: React.CSSProperties = { fontFamily: "var(--font-mono)", letterSpacing: "0.12em", textTransform: "uppercase" as const }
+
+const PERM_OPTIONS = [
+  { key: "announce", label: "Duyuru Gönder" },
+  { key: "images", label: "Galeri Yönet" },
+  { key: "forum", label: "Forum Oku" },
+  { key: "accounts", label: "Hesap Oluştur" },
+] as const
 
 function OfficerFormFields({ form, setForm }: { form: OfficerForm; setForm: (f: OfficerForm) => void }) {
   return (
@@ -229,6 +236,7 @@ export default function AdminDashboard() {
     created_at: string
     is_active: boolean
     permissions: Record<string, boolean>
+    role_id?: number | null
   }
   const [accounts, setAccounts] = useState<AdminAccount[]>([])
   const [newAccUsername, setNewAccUsername] = useState("")
@@ -236,6 +244,20 @@ export default function AdminDashboard() {
   const [newAccRole, setNewAccRole] = useState<"moderator" | "interview">("moderator")
   const [accSaving, setAccSaving] = useState(false)
   const [accError, setAccError] = useState("")
+
+  interface AdminRoleDb {
+    id: number
+    name: string
+    color: string
+    permissions: Record<string, boolean>
+    is_builtin: boolean
+    created_at: string
+  }
+  const [adminRoles, setAdminRoles] = useState<AdminRoleDb[]>([])
+  const [newRoleName, setNewRoleName] = useState("")
+  const [newRoleColor, setNewRoleColor] = useState("#5865f2")
+  const [newRolePerms, setNewRolePerms] = useState<Record<string, boolean>>({ announce: false, images: false, forum: false, accounts: false })
+  const [roleSaving, setRoleSaving] = useState(false)
 
   const router = useRouter()
 
@@ -285,6 +307,10 @@ export default function AdminDashboard() {
     fetch("/api/admin/accounts")
       .then((r) => r.ok ? r.json() : [])
       .then((d) => { setAccounts(Array.isArray(d) ? d : []) })
+      .catch(() => {})
+    fetch("/api/admin/roles")
+      .then((r) => r.ok ? r.json() : [])
+      .then((d) => { setAdminRoles(Array.isArray(d) ? d : []) })
       .catch(() => {})
   }, [])
 
@@ -503,6 +529,39 @@ export default function AdminDashboard() {
       const updated = await res.json()
       setOfficers(p => p.map(o => o.id === updated.id ? updated : o))
     }
+  }
+
+  const createRole = async (e: React.FormEvent) => {
+    e.preventDefault()
+    if (!newRoleName.trim()) return
+    setRoleSaving(true)
+    const res = await fetch("/api/admin/roles", { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ name: newRoleName.trim(), color: newRoleColor, permissions: newRolePerms }) })
+    if (res.ok) {
+      const created = await res.json()
+      setAdminRoles(p => [...p, created])
+      setNewRoleName("")
+      setNewRolePerms({ announce: false, images: false, forum: false, accounts: false })
+    }
+    setRoleSaving(false)
+  }
+
+  const updateRolePermissions = async (id: number, permissions: Record<string, boolean>) => {
+    const res = await fetch("/api/admin/roles", { method: "PATCH", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ id, permissions }) })
+    if (res.ok) { const updated = await res.json(); setAdminRoles(p => p.map(r => r.id === id ? updated : r)) }
+  }
+
+  const deleteRole = async (id: number, name: string) => {
+    if (!confirm(`"${name}" rolünü silmek istediğinizden emin misiniz? Bu role atanmış hesaplar varsayılan rollerine dönecektir.`)) return
+    const res = await fetch("/api/admin/roles", { method: "DELETE", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ id }) })
+    if (res.ok) {
+      setAdminRoles(p => p.filter(r => r.id !== id))
+      setAccounts(p => p.map(a => a.role_id === id ? { ...a, role_id: null } : a))
+    }
+  }
+
+  const assignRole = async (accountId: string, roleId: number | null) => {
+    const res = await fetch("/api/admin/accounts", { method: "PATCH", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ id: accountId, role_id: roleId }) })
+    if (res.ok) { const updated = await res.json(); setAccounts(p => p.map(a => a.id === accountId ? updated : a)) }
   }
 
   const isLinked = (discordId: string) => officers.some((o) => o.discord_id === discordId)
@@ -836,7 +895,7 @@ export default function AdminDashboard() {
 
       {/* Tabs — filtered by role */}
       <div style={{ background: "var(--color-bg-2)", borderBottom: "1px solid var(--color-line)", padding: "0 clamp(20px,4vw,48px)", display: "flex", gap: 4, overflowX: "auto" }}>
-        {(["applications", "officers", "access", "badges", "announcements", "ribbon", "gallery", "archive", "rules", "accounts"] as Tab[])
+        {(["applications", "officers", "access", "badges", "announcements", "ribbon", "gallery", "archive", "rules", "accounts", "roles"] as Tab[])
           .filter((t) => {
             if (adminRole === "interview") return t === "applications"
             if (adminRole === "moderator") return ["applications", "access", "badges", "announcements", "ribbon", "gallery", "archive", "rules"].includes(t)
@@ -844,7 +903,7 @@ export default function AdminDashboard() {
           })
           .map((t) => (
             <button key={t} onClick={() => { setTab(t); if (t === "archive") loadArchive() }} style={{ ...mono, fontSize: "0.62rem", padding: "14px 20px", background: "transparent", border: "none", borderBottom: tab === t ? "2px solid var(--color-accent)" : "2px solid transparent", color: tab === t ? "var(--color-accent)" : "var(--color-faint)", cursor: "pointer", whiteSpace: "nowrap", flexShrink: 0 }}>
-              {t === "applications" ? `Başvurular (${apps.length})` : t === "officers" ? `Personel (${officers.length})` : t === "access" ? `Erişim (${accessRequests.filter(r => r.status === "pending").length})` : t === "badges" ? `Rozetler (${badgeTypes.length})` : t === "announcements" ? `Duyurular (${announcements.length})` : t === "ribbon" ? `Kayan Mesajlar (${ribbonMessages.length})` : t === "gallery" ? `Galeri (${galleryImages.length})` : t === "archive" ? `Arşiv (${archivedApps.length})` : t === "rules" ? `Kurallar` : `Hesaplar (${accounts.length})`}
+              {t === "applications" ? `Başvurular (${apps.length})` : t === "officers" ? `Personel (${officers.length})` : t === "access" ? `Erişim (${accessRequests.filter(r => r.status === "pending").length})` : t === "badges" ? `Rozetler (${badgeTypes.length})` : t === "announcements" ? `Duyurular (${announcements.length})` : t === "ribbon" ? `Kayan Mesajlar (${ribbonMessages.length})` : t === "gallery" ? `Galeri (${galleryImages.length})` : t === "archive" ? `Arşiv (${archivedApps.length})` : t === "rules" ? `Kurallar` : t === "accounts" ? `Hesaplar (${accounts.length})` : `Roller (${adminRoles.length})`}
             </button>
           ))}
       </div>
@@ -1273,13 +1332,7 @@ export default function AdminDashboard() {
           ) : (
             <div style={{ display: "flex", flexDirection: "column", gap: 12 }}>
               {accounts.map((acc) => {
-                const perms = acc.permissions ?? {}
-                const PERM_LABELS: { key: string; label: string; moderatorDefault: boolean }[] = [
-                  { key: "announce", label: "Duyuru Gönder", moderatorDefault: true },
-                  { key: "images", label: "Galeri Yönet", moderatorDefault: true },
-                  { key: "forum", label: "Forum Oku", moderatorDefault: true },
-                  { key: "accounts", label: "Hesap Oluştur", moderatorDefault: false },
-                ]
+                const assignedRole = acc.role_id ? adminRoles.find(r => r.id === acc.role_id) : null
                 return (
                   <div key={acc.id} style={{ background: "var(--color-bg-2)", border: "1px solid var(--color-line)", padding: "16px 20px" }}>
                     <div style={{ display: "flex", alignItems: "center", gap: 12, flexWrap: "wrap", marginBottom: 14 }}>
@@ -1298,23 +1351,32 @@ export default function AdminDashboard() {
                         <button onClick={() => deleteAccount(acc.id, acc.username)} style={{ ...mono, fontSize: "0.55rem", padding: "5px 10px", background: "transparent", color: "var(--color-faint)", border: "1px solid var(--color-line)", cursor: "pointer" }}>Sil</button>
                       </div>
                     </div>
-                    {/* Per-account permission overrides */}
+                    {/* Role assignment */}
                     <div style={{ borderTop: "1px solid var(--color-line)", paddingTop: 12 }}>
-                      <div style={{ ...mono, fontSize: "0.5rem", color: "var(--color-faint)", marginBottom: 10, letterSpacing: "0.18em" }}>Özel Yetkiler</div>
-                      <div className="flex gap-4 flex-wrap">
-                        {PERM_LABELS.map(({ key, label, moderatorDefault }) => {
-                          const effective = key in perms ? perms[key] : (acc.role === "moderator" ? moderatorDefault : false)
-                          return (
-                            <label key={key} className="flex items-center gap-2 cursor-pointer">
-                              <input
-                                type="checkbox"
-                                checked={effective}
-                                onChange={(e) => savePermissions(acc.id, { ...perms, [key]: e.target.checked })}
-                              />
-                              <span style={{ ...mono, fontSize: "0.58rem", color: effective ? "var(--color-accent)" : "var(--color-faint)", fontWeight: effective ? 700 : 400 }}>{label}</span>
-                            </label>
-                          )
-                        })}
+                      <div style={{ ...mono, fontSize: "0.5rem", color: "var(--color-faint)", marginBottom: 10, letterSpacing: "0.18em" }}>Özel Rol Ata</div>
+                      <div className="flex items-start gap-4 flex-wrap">
+                        <select
+                          value={acc.role_id ?? ""}
+                          onChange={(e) => assignRole(acc.id, e.target.value ? Number(e.target.value) : null)}
+                          style={{ background: "var(--color-bg)", border: "1px solid var(--color-line)", color: "var(--color-txt)", padding: "6px 10px", fontFamily: "var(--font-mono)", fontSize: "0.65rem", outline: "none" }}
+                        >
+                          <option value="">— Varsayılan ({acc.role === "moderator" ? "Moderatör" : "Mülakat"}) —</option>
+                          {adminRoles.map((r) => (
+                            <option key={r.id} value={r.id}>{r.name}</option>
+                          ))}
+                        </select>
+                        {assignedRole && (
+                          <div className="flex gap-2 flex-wrap">
+                            {PERM_OPTIONS.map(({ key, label }) => {
+                              const has = assignedRole.permissions[key] ?? false
+                              return (
+                                <span key={key} style={{ ...mono, fontSize: "0.52rem", padding: "3px 8px", border: `1px solid ${has ? assignedRole.color : "var(--color-line)"}`, color: has ? assignedRole.color : "var(--color-faint)", background: has ? `${assignedRole.color}18` : "transparent" }}>
+                                  {label} {has ? "✓" : "✕"}
+                                </span>
+                              )
+                            })}
+                          </div>
+                        )}
                       </div>
                     </div>
                   </div>
@@ -1513,6 +1575,105 @@ export default function AdminDashboard() {
                   </div>
                 </div>
               )})}
+            </div>
+          )}
+        </div>
+      )}
+
+      {/* ── Roles tab (founder only) ── */}
+      {tab === "roles" && adminRole === "founder" && (
+        <div style={{ padding: "24px clamp(20px,4vw,48px)" }}>
+          {/* Create role form */}
+          <div style={{ background: "var(--color-bg-2)", border: "1px solid var(--color-line)", padding: 24, marginBottom: 32 }}>
+            <div style={{ ...mono, fontSize: "0.65rem", color: "var(--color-accent)", marginBottom: 4 }}>Yeni Rol Oluştur</div>
+            <div style={{ ...mono, fontSize: "0.55rem", color: "var(--color-faint)", marginBottom: 20 }}>
+              Özel roller oluşturun, yetkilerini belirleyin ve Hesaplar sekmesinden atayın.
+            </div>
+            <form onSubmit={createRole}>
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-4 mb-4">
+                <label style={{ display: "flex", flexDirection: "column", gap: 6 }}>
+                  <span style={{ ...mono, fontSize: "0.55rem", color: "var(--color-faint)" }}>Rol Adı</span>
+                  <input
+                    type="text"
+                    value={newRoleName}
+                    onChange={(e) => setNewRoleName(e.target.value)}
+                    placeholder="örn. İçerik Yöneticisi"
+                    style={{ background: "var(--color-bg)", border: "1px solid var(--color-line)", color: "var(--color-txt)", padding: "8px 12px", fontFamily: "var(--font-mono)", fontSize: "0.75rem", outline: "none" }}
+                  />
+                </label>
+                <label style={{ display: "flex", flexDirection: "column", gap: 6 }}>
+                  <span style={{ ...mono, fontSize: "0.55rem", color: "var(--color-faint)" }}>Renk</span>
+                  <div className="flex items-center gap-3">
+                    <input
+                      type="color"
+                      value={newRoleColor}
+                      onChange={(e) => setNewRoleColor(e.target.value)}
+                      style={{ width: 40, height: 36, border: "1px solid var(--color-line)", background: "transparent", cursor: "pointer", padding: 2 }}
+                    />
+                    <span style={{ ...mono, fontSize: "0.65rem", color: "var(--color-muted)" }}>{newRoleColor}</span>
+                    <span style={{ ...mono, fontSize: "0.65rem", padding: "3px 12px", background: newRoleColor, color: "#fff", fontWeight: 700 }}>{newRoleName || "Rol Adı"}</span>
+                  </div>
+                </label>
+              </div>
+              <div style={{ marginBottom: 16 }}>
+                <div style={{ ...mono, fontSize: "0.5rem", color: "var(--color-faint)", marginBottom: 10, letterSpacing: "0.18em" }}>Yetkiler</div>
+                <div className="flex gap-4 flex-wrap">
+                  {PERM_OPTIONS.map(({ key, label }) => (
+                    <label key={key} className="flex items-center gap-2 cursor-pointer">
+                      <input
+                        type="checkbox"
+                        checked={newRolePerms[key] ?? false}
+                        onChange={(e) => setNewRolePerms(p => ({ ...p, [key]: e.target.checked }))}
+                      />
+                      <span style={{ ...mono, fontSize: "0.58rem", color: newRolePerms[key] ? "var(--color-accent)" : "var(--color-faint)", fontWeight: newRolePerms[key] ? 700 : 400 }}>{label}</span>
+                    </label>
+                  ))}
+                </div>
+              </div>
+              <button
+                type="submit"
+                disabled={roleSaving || !newRoleName.trim()}
+                style={{ ...mono, fontSize: "0.65rem", padding: "10px 24px", background: newRoleName.trim() && !roleSaving ? "var(--color-accent)" : "var(--color-bg-3)", color: newRoleName.trim() && !roleSaving ? "var(--color-accent-ink)" : "var(--color-faint)", border: "none", cursor: newRoleName.trim() ? "pointer" : "not-allowed", fontWeight: 700 }}
+              >
+                {roleSaving ? "Oluşturuluyor…" : "Rol Oluştur"}
+              </button>
+            </form>
+          </div>
+
+          {/* Roles list */}
+          {adminRoles.length === 0 ? (
+            <div style={{ ...mono, fontSize: "0.65rem", color: "var(--color-faint)", padding: 32, textAlign: "center" }}>Henüz özel rol oluşturulmamış</div>
+          ) : (
+            <div style={{ display: "flex", flexDirection: "column", gap: 12 }}>
+              {adminRoles.map((r) => (
+                <div key={r.id} style={{ background: "var(--color-bg-2)", border: `1px solid ${r.color}50`, padding: "16px 20px" }}>
+                  <div style={{ display: "flex", alignItems: "center", gap: 12, marginBottom: 14, flexWrap: "wrap" }}>
+                    <div style={{ width: 12, height: 12, borderRadius: "50%", background: r.color, flexShrink: 0 }} />
+                    <span style={{ fontFamily: "var(--font-body)", fontSize: "0.95rem", fontWeight: 700, color: r.color, flex: 1 }}>{r.name}</span>
+                    {r.is_builtin && (
+                      <span style={{ ...mono, fontSize: "0.5rem", color: "var(--color-faint)", border: "1px solid var(--color-line)", padding: "2px 7px" }}>Yerleşik</span>
+                    )}
+                    {!r.is_builtin && (
+                      <button onClick={() => deleteRole(r.id, r.name)} style={{ ...mono, fontSize: "0.55rem", padding: "5px 10px", background: "transparent", color: "var(--color-warn)", border: "1px solid var(--color-warn)", cursor: "pointer" }}>Sil</button>
+                    )}
+                  </div>
+                  <div>
+                    <div style={{ ...mono, fontSize: "0.5rem", color: "var(--color-faint)", marginBottom: 10, letterSpacing: "0.18em" }}>Yetkiler</div>
+                    <div className="flex gap-4 flex-wrap">
+                      {PERM_OPTIONS.map(({ key, label }) => (
+                        <label key={key} className="flex items-center gap-2 cursor-pointer">
+                          <input
+                            type="checkbox"
+                            checked={r.permissions[key] ?? false}
+                            onChange={(e) => updateRolePermissions(r.id, { ...r.permissions, [key]: e.target.checked })}
+                          />
+                          <span style={{ ...mono, fontSize: "0.58rem", color: r.permissions[key] ? r.color : "var(--color-faint)", fontWeight: r.permissions[key] ? 700 : 400 }}>{label}</span>
+                        </label>
+                      ))}
+                    </div>
+                  </div>
+                </div>
+              ))}
             </div>
           )}
         </div>

@@ -1,6 +1,7 @@
 "use client"
 
 import { useState, useEffect, useRef } from "react"
+import Image from "next/image"
 
 type UnitFilter = "TÜM" | "High Command" | "Sup. Command" | "Supervisor" | "Polis"
 
@@ -11,6 +12,11 @@ interface OfficerRow {
   rank: string
   unit: string
   status: string
+  discord_avatar?: string | null
+  seniority_months?: number
+  rank_progress?: number
+  next_rank?: string | null
+  duty_hours?: number
 }
 
 const UNITS: UnitFilter[] = ["TÜM", "High Command", "Sup. Command", "Supervisor", "Polis"]
@@ -57,11 +63,93 @@ function StatusBadge({ status }: { status: string }) {
   )
 }
 
+function statusColor(s: string) {
+  if (s === "Görevde") return "var(--color-status-on)"
+  if (s === "Aktif") return "var(--color-accent)"
+  if (s === "İzinli") return "oklch(0.72 0.16 230)"
+  return "var(--color-faint)"
+}
+
+function OfficerModal({ officer, onClose }: { officer: OfficerRow; onClose: () => void }) {
+  const seniority = officer.seniority_months ?? 0
+  const seniorityText = seniority >= 12
+    ? `${Math.floor(seniority / 12)} yıl ${seniority % 12} ay`
+    : `${seniority} ay`
+  const progress = Math.min(100, Math.max(0, officer.rank_progress ?? 0))
+
+  return (
+    <div
+      style={{ position: "fixed", inset: 0, background: "oklch(0 0 0 / 0.82)", zIndex: 800, display: "flex", alignItems: "center", justifyContent: "center", padding: 24 }}
+      onClick={onClose}
+    >
+      <div
+        style={{ background: "var(--color-bg-2)", border: "1px solid var(--color-line)", width: "100%", maxWidth: 480 }}
+        onClick={(e) => e.stopPropagation()}
+      >
+        {/* Header */}
+        <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", padding: "14px 20px", borderBottom: "1px solid var(--color-line)", background: "var(--color-bg-3)" }}>
+          <span style={{ fontFamily: "var(--font-mono)", fontSize: "0.58rem", letterSpacing: "0.14em", textTransform: "uppercase", color: "var(--color-accent)" }}>● Personel Kaydı</span>
+          <button onClick={onClose} style={{ fontFamily: "var(--font-mono)", fontSize: "0.55rem", letterSpacing: "0.1em", color: "var(--color-faint)", border: "1px solid var(--color-line)", padding: "4px 10px", background: "transparent", cursor: "pointer" }}>✕</button>
+        </div>
+
+        <div style={{ padding: 24 }}>
+          {/* Avatar + identity */}
+          <div style={{ display: "flex", gap: 16, alignItems: "center", marginBottom: 20 }}>
+            <div style={{ position: "relative", width: 72, height: 72, flexShrink: 0 }}>
+              {officer.discord_avatar ? (
+                <Image src={officer.discord_avatar} alt={officer.name} fill className="rounded-full" style={{ objectFit: "cover", border: "2px solid #5865F2" }} />
+              ) : (
+                <div className="rounded-full flex items-center justify-center" style={{ width: 72, height: 72, background: "var(--color-bg-3)", border: "2px solid var(--color-line)", fontFamily: "var(--font-mono)", fontSize: "1.1rem", color: "var(--color-accent)", fontWeight: 700 }}>
+                  {officer.name.split(" ").map((p) => p[0]).join("").slice(0, 2).toUpperCase()}
+                </div>
+              )}
+              <span style={{ position: "absolute", bottom: 2, right: 2, width: 12, height: 12, borderRadius: "50%", background: statusColor(officer.status), border: "2px solid var(--color-bg-2)" }} />
+            </div>
+            <div>
+              <div style={{ fontFamily: "var(--font-display)", fontSize: "1.2rem", fontWeight: 700, textTransform: "uppercase", color: "var(--color-txt)", lineHeight: 1.1 }}>{officer.name}</div>
+              <div style={{ fontFamily: "var(--font-mono)", fontSize: "0.6rem", letterSpacing: "0.12em", color: "var(--color-accent)", marginTop: 4 }}>{officer.badge_no} · {officer.rank}</div>
+              <div style={{ fontFamily: "var(--font-mono)", fontSize: "0.55rem", letterSpacing: "0.1em", color: "var(--color-faint)", marginTop: 2 }}>{officer.unit}</div>
+            </div>
+          </div>
+
+          {/* Stats grid */}
+          <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 10, marginBottom: 16 }}>
+            {[
+              { label: "Durum", value: officer.status, color: statusColor(officer.status) },
+              { label: "Kıdem", value: seniorityText },
+              { label: "Devriye", value: officer.duty_hours ? `${Math.floor((officer.duty_hours ?? 0) / 3600)}s` : "—" },
+              { label: "Sonraki Rütbe", value: officer.next_rank || "—" },
+            ].map(({ label, value, color }) => (
+              <div key={label} style={{ background: "var(--color-bg-3)", border: "1px solid var(--color-line)", padding: "10px 14px" }}>
+                <div style={{ fontFamily: "var(--font-mono)", fontSize: "0.5rem", letterSpacing: "0.16em", textTransform: "uppercase", color: "var(--color-faint)", marginBottom: 4 }}>{label}</div>
+                <div style={{ fontFamily: "var(--font-mono)", fontSize: "0.72rem", fontWeight: 700, color: color ?? "var(--color-txt)" }}>{value}</div>
+              </div>
+            ))}
+          </div>
+
+          {/* Rank progress */}
+          {officer.next_rank && (
+            <div>
+              <div style={{ fontFamily: "var(--font-mono)", fontSize: "0.5rem", letterSpacing: "0.16em", textTransform: "uppercase", color: "var(--color-faint)", marginBottom: 6 }}>
+                Rütbe İlerlemesi — {progress}%
+              </div>
+              <div style={{ height: 4, background: "var(--color-bg-3)", border: "1px solid var(--color-line)", overflow: "hidden" }}>
+                <div style={{ height: "100%", width: `${progress}%`, background: "var(--color-accent)", transition: "width 0.4s ease" }} />
+              </div>
+            </div>
+          )}
+        </div>
+      </div>
+    </div>
+  )
+}
+
 export default function PersonnelSection() {
   const [officers, setOfficers] = useState<OfficerRow[]>([])
   const [loading, setLoading] = useState(true)
   const [activeUnit, setActiveUnit] = useState<UnitFilter>("TÜM")
   const [search, setSearch] = useState("")
+  const [modalOfficer, setModalOfficer] = useState<OfficerRow | null>(null)
 
   useEffect(() => {
     fetch("/api/officers")
@@ -79,6 +167,7 @@ export default function PersonnelSection() {
 
   return (
     <section id="personel" className="section-pad" style={{ borderBottom: "1px solid var(--color-line)" }}>
+      {modalOfficer && <OfficerModal officer={modalOfficer} onClose={() => setModalOfficer(null)} />}
       <div className="container-max">
         <div className="kicker mb-4">03 / Personel Kadrosu</div>
         <h2 className="mb-8" style={{ fontFamily: "var(--font-display)", fontSize: "clamp(1.8rem, 3.5vw, 2.8rem)", fontWeight: 700, textTransform: "uppercase", color: "var(--color-txt)" }}>
@@ -113,7 +202,7 @@ export default function PersonnelSection() {
                 </div>
               ) : (
                 filtered.map((o, i) => (
-                  <div key={o.id} className="grid table-row-hover cursor-default" style={{ gridTemplateColumns: "100px 1fr 180px 140px 120px", padding: "12px 16px", borderBottom: i < filtered.length - 1 ? "1px solid var(--color-line-soft)" : "none", alignItems: "center" }}>
+                  <div key={o.id} className="grid table-row-hover cursor-pointer" onClick={() => setModalOfficer(o)} style={{ gridTemplateColumns: "100px 1fr 180px 140px 120px", padding: "12px 16px", borderBottom: i < filtered.length - 1 ? "1px solid var(--color-line-soft)" : "none", alignItems: "center" }}>
                     <span style={{ fontFamily: "var(--font-mono)", fontSize: "0.65rem", letterSpacing: "0.12em", color: "var(--color-accent)" }}>{o.badge_no}</span>
                     <div className="flex items-center gap-3">
                       <OfficerAvatar name={o.name} />
