@@ -1,39 +1,49 @@
-const UNITS = [
+import { Car, Search, Crosshair, AlertOctagon, PawPrint, Plane } from "lucide-react"
+import type { LucideIcon } from "lucide-react"
+
+interface Unit {
+  code: string
+  name: string
+  desc: string
+  Icon: LucideIcon
+}
+
+const UNITS: Unit[] = [
   {
     code: "HPD",
     name: "Karayolu Devriye Birimi",
     desc: "Eyalet yollarında trafik denetimi, sürücü güvenliği ve karayolu devriyesi.",
-    icon: "🚔",
+    Icon: Car,
   },
   {
     code: "CID",
     name: "Suç Soruşturma Birimi",
     desc: "Ağır suç soruşturmaları, dedektif görevi ve delil toplama operasyonları.",
-    icon: "🔍",
+    Icon: Search,
   },
   {
     code: "SWAT",
     name: "Özel Harekat Timi",
     desc: "Yüksek riskli operasyonlar, rehine müzakeresi ve taktiksel müdahale.",
-    icon: "🛡️",
+    Icon: Crosshair,
   },
   {
     code: "TFD",
     name: "Trafik Denetleme Birimi",
     desc: "Trafik ihlalleri, kaza soruşturması ve karayolu güvenlik kampanyaları.",
-    icon: "🚦",
+    Icon: AlertOctagon,
   },
   {
     code: "K9",
     name: "K9 Köpek Birimi",
     desc: "Arama-kurtarma operasyonları, uyuşturucu ve patlayıcı tespiti.",
-    icon: "🐕",
+    Icon: PawPrint,
   },
   {
     code: "ASD",
     name: "Hava Destek Birimi",
     desc: "Helikopter desteği, hava gözetleme ve uzaktan takip operasyonları.",
-    icon: "🚁",
+    Icon: Plane,
   },
 ]
 
@@ -78,14 +88,14 @@ export default function UnitsSection() {
 
               <div className="flex items-start gap-4">
                 <div
-                  className="text-2xl flex-shrink-0 w-10 h-10 flex items-center justify-center"
+                  className="flex-shrink-0 w-10 h-10 flex items-center justify-center"
                   style={{
                     background: "var(--color-bg-3)",
-                    border: "1px solid var(--color-line)",
-                    fontSize: "1.1rem",
+                    border: "1px solid var(--color-accent)",
+                    color: "var(--color-accent)",
                   }}
                 >
-                  {unit.icon}
+                  <unit.Icon size={18} strokeWidth={1.5} />
                 </div>
                 <div>
                   <div
