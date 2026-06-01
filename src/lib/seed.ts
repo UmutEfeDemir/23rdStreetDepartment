@@ -12,6 +12,7 @@ export const SEED_OFFICERS: Officer[] = [
     rankProgress: 100,
     nextRank: null,
     isCommand: true,
+    avatarUrl: "/gallery/richye-smoke.png",
     stats: { dutyHours: 1240, patrols: 312, commendations: 18, warnings: 0 },
   },
   {
@@ -25,6 +26,7 @@ export const SEED_OFFICERS: Officer[] = [
     rankProgress: 88,
     nextRank: null,
     isCommand: true,
+    avatarUrl: "/gallery/isaac-hancer.png",
     stats: { dutyHours: 980, patrols: 240, commendations: 14, warnings: 0 },
   },
   {
@@ -38,6 +40,7 @@ export const SEED_OFFICERS: Officer[] = [
     rankProgress: 72,
     nextRank: "Captain",
     isCommand: true,
+    avatarUrl: "/gallery/jon-nollane.png",
     stats: { dutyHours: 820, patrols: 198, commendations: 11, warnings: 0 },
   },
   {
@@ -51,6 +54,7 @@ export const SEED_OFFICERS: Officer[] = [
     rankProgress: 65,
     nextRank: "Senior Lieutenant",
     isCommand: true,
+    avatarUrl: "/gallery/boris-harold.png",
     stats: { dutyHours: 740, patrols: 176, commendations: 9, warnings: 0 },
   },
   {

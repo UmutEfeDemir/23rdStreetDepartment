@@ -141,27 +141,6 @@ export default function Nav() {
               </button>
             </div>
           ) : null}
-          <a
-            href={process.env.NEXT_PUBLIC_DISCORD_INVITE_URL ?? "#join"}
-            target="_blank"
-            rel="noopener noreferrer"
-            className="btn-clip"
-            style={{
-              fontFamily: "var(--font-mono)",
-              fontSize: "0.65rem",
-              letterSpacing: "0.16em",
-              textTransform: "uppercase",
-              background: "var(--color-accent)",
-              color: "var(--color-accent-ink)",
-              padding: "8px 20px",
-              fontWeight: 700,
-              textDecoration: "none",
-              display: "inline-block",
-              transition: "opacity 0.2s",
-            }}
-          >
-            Discord'a Katıl
-          </a>
         </div>
 
         {/* Mobile hamburger */}
@@ -218,28 +197,6 @@ export default function Nav() {
               {link.label}
             </a>
           ))}
-          <div className="mt-4 flex gap-3">
-            <a
-              href={process.env.NEXT_PUBLIC_DISCORD_INVITE_URL ?? "#join"}
-              target="_blank"
-              rel="noopener noreferrer"
-              className="btn-clip"
-              style={{
-                fontFamily: "var(--font-mono)",
-                fontSize: "0.65rem",
-                letterSpacing: "0.16em",
-                textTransform: "uppercase",
-                background: "var(--color-accent)",
-                color: "var(--color-accent-ink)",
-                padding: "8px 20px",
-                fontWeight: 700,
-                textDecoration: "none",
-                display: "inline-block",
-              }}
-            >
-              Discord'a Katıl
-            </a>
-          </div>
         </div>
       )}
     </nav>

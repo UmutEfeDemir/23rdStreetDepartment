@@ -1,6 +1,7 @@
 "use client"
 
 import { useState } from "react"
+import { useSession } from "next-auth/react"
 import { useForm } from "react-hook-form"
 import { zodResolver } from "@hookform/resolvers/zod"
 import { z } from "zod"
@@ -25,6 +26,7 @@ const STEPS = [
 ]
 
 export default function ApplicationForm() {
+  const { data: session } = useSession()
   const [step, setStep] = useState(0)
   const [submitted, setSubmitted] = useState(false)
   const [error, setError] = useState<string | null>(null)
@@ -102,6 +104,8 @@ export default function ApplicationForm() {
       setLoading(false)
     }
   }
+
+  if (session) return null
 
   return (
     <section

@@ -1,3 +1,4 @@
+import Image from "next/image"
 import type { Officer } from "@/lib/types"
 import { UNIT_LABELS } from "@/lib/types"
 
@@ -5,28 +6,19 @@ interface Props {
   officers: Officer[]
 }
 
-function Monogram({ name }: { name: string }) {
-  const initials = name
-    .split(/[\s.]/)
-    .filter(Boolean)
-    .map((p) => p[0])
-    .join("")
-    .slice(0, 2)
-    .toUpperCase()
-
+function Avatar({ officer }: { officer: Officer }) {
+  const initials = officer.name.split(/[\s.]/).filter(Boolean).map((p) => p[0]).join("").slice(0, 2).toUpperCase()
+  if (officer.avatarUrl) {
+    return (
+      <div className="rounded-full overflow-hidden flex-shrink-0" style={{ width: 88, height: 88, border: "2px solid var(--color-accent)" }}>
+        <Image src={officer.avatarUrl} alt={officer.name} width={88} height={88} style={{ objectFit: "cover", width: "100%", height: "100%" }} />
+      </div>
+    )
+  }
   return (
     <div
       className="rounded-full flex items-center justify-center text-lg font-bold"
-      style={{
-        width: 88,
-        height: 88,
-        background: "var(--color-bg-3)",
-        border: "2px solid var(--color-accent)",
-        fontFamily: "var(--font-display)",
-        color: "var(--color-accent)",
-        letterSpacing: "0.04em",
-        flexShrink: 0,
-      }}
+      style={{ width: 88, height: 88, background: "var(--color-bg-3)", border: "2px solid var(--color-accent)", fontFamily: "var(--font-display)", color: "var(--color-accent)", letterSpacing: "0.04em", flexShrink: 0 }}
     >
       {initials}
     </div>
@@ -81,7 +73,7 @@ export default function CommandSection({ officers }: Props) {
                 }}
               />
 
-              <Monogram name={officer.name} />
+              <Avatar officer={officer} />
 
               {/* Badge */}
               <div
