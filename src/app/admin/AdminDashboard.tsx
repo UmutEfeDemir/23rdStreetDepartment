@@ -983,17 +983,20 @@ export default function AdminDashboard() {
               : adminCustomRoleName
                 ? `● ${adminCustomRoleName}`
                 : adminRole === "moderator" ? "● Moderatör" : "● Mülakat"
-            const hasGradient = adminRole !== "founder" && adminCustomRoleColor && adminCustomRoleColorTo
-            const bg = hasGradient
-              ? `linear-gradient(135deg, ${adminCustomRoleColor}, ${adminCustomRoleColorTo})`
-              : "transparent"
-            const borderColor = adminRole === "founder"
-              ? "var(--color-accent)"
+            const isFounderRole = adminRole === "founder"
+            const hasGradient = !isFounderRole && adminCustomRoleColor && adminCustomRoleColorTo
+            const bg = isFounderRole
+              ? "linear-gradient(135deg, #94a3b8, #f8fafc)"
+              : hasGradient
+                ? `linear-gradient(135deg, ${adminCustomRoleColor}, ${adminCustomRoleColorTo})`
+                : "transparent"
+            const borderColor = isFounderRole
+              ? "#94a3b8"
               : adminCustomRoleColor ?? (adminRole === "moderator" ? "oklch(0.72 0.16 230)" : "var(--color-status-on)")
-            const textColor = hasGradient
-              ? "#fff"
-              : adminRole === "founder"
-                ? "var(--color-accent)"
+            const textColor = isFounderRole
+              ? "#0f172a"
+              : hasGradient
+                ? "#fff"
                 : adminCustomRoleColor ?? (adminRole === "moderator" ? "oklch(0.72 0.16 230)" : "var(--color-status-on)")
             return (
               <span style={{ ...mono, fontSize: "0.52rem", padding: "4px 10px", border: `1px solid ${borderColor}`, color: textColor, background: bg }}>
