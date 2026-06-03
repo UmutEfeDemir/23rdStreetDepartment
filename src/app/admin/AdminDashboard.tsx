@@ -70,13 +70,20 @@ const CATEGORY_LABELS: Record<string, string> = {
 const CATEGORY_ORDER = ["unit", "license", "certificate", "role"]
 
 const COLOR_PRESETS = [
-  { label: "Mavi — Birim",        from: "#0f172a", to: "#3b82f6" },
-  { label: "Altın — Lisans",      from: "#78350f", to: "#f59e0b" },
-  { label: "Yeşil — Rol",         from: "#14532d", to: "#22c55e" },
-  { label: "Mor — Sertifika",     from: "#4c1d95", to: "#a855f7" },
-  { label: "Kırmızı",             from: "#7f1d1d", to: "#ef4444" },
-  { label: "Cyan",                from: "#164e63", to: "#22d3ee" },
+  { label: "Gece Mavisi",         from: "#0f172a", to: "#3b82f6" },
+  { label: "Altın Ateş",          from: "#78350f", to: "#f59e0b" },
+  { label: "Orman Yeşili",        from: "#14532d", to: "#22c55e" },
+  { label: "Mor Nebula",          from: "#4c1d95", to: "#a855f7" },
+  { label: "Kan Kırmızı",         from: "#7f1d1d", to: "#ef4444" },
+  { label: "Buz Mavisi",          from: "#164e63", to: "#22d3ee" },
   { label: "Gümüş",               from: "#374151", to: "#9ca3af" },
+  { label: "Gün Batımı",          from: "#7c2d12", to: "#fb923c" },
+  { label: "Okyanus",             from: "#0c4a6e", to: "#38bdf8" },
+  { label: "Pembe Altın",         from: "#831843", to: "#f472b6" },
+  { label: "Zümrüt",              from: "#064e3b", to: "#34d399" },
+  { label: "Elektrik Mor",        from: "#2e1065", to: "#c084fc" },
+  { label: "Lav",                 from: "#450a0a", to: "#f97316" },
+  { label: "Kutup",               from: "#1e3a5f", to: "#67e8f9" },
 ]
 
 const STATUS_LABELS: Record<AppStatus, string> = { pending: "Beklemede", interview: "Mülakat", accepted: "Kabul", rejected: "Red" }
@@ -89,6 +96,10 @@ const emptyForm = { discord_id: "", discord_avatar: "", badge_no: "", name: "", 
 type OfficerForm = typeof emptyForm
 
 const mono: React.CSSProperties = { fontFamily: "var(--font-mono)", letterSpacing: "0.12em", textTransform: "uppercase" as const }
+
+function roleGradient(color: string, colorTo?: string | null) {
+  return colorTo ? `linear-gradient(135deg, ${color}, ${colorTo})` : color
+}
 
 const PERM_OPTIONS = [
   { key: "announce", label: "Duyuru Gönder" },
@@ -136,6 +147,78 @@ function OfficerFormFields({ form, setForm }: { form: OfficerForm; setForm: (f: 
         <input type="checkbox" checked={form.is_command} onChange={(e) => setForm({ ...form, is_command: e.target.checked })} />
         <span style={{ ...mono, fontSize: "0.6rem", color: "var(--color-muted)" }}>Komuta Kademesi</span>
       </label>
+    </div>
+  )
+}
+
+interface AdminRoleDbProp {
+  id: number; name: string; color: string; color_to?: string | null
+  permissions: Record<string, boolean>; is_builtin: boolean; created_at: string
+}
+
+function RoleCard({ role: r, onUpdatePermissions, onUpdateColors, onDelete, mono }: {
+  role: AdminRoleDbProp
+  onUpdatePermissions: (p: Record<string, boolean>) => void
+  onUpdateColors: (c: string, ct: string | null) => void
+  onDelete: () => void
+  mono: React.CSSProperties
+}) {
+  const [color, setColor] = useState(r.color)
+  const [colorTo, setColorTo] = useState(r.color_to ?? r.color)
+
+  const saveColors = () => onUpdateColors(color, colorTo !== color ? colorTo : null)
+
+  return (
+    <div style={{ background: "var(--color-bg-2)", borderLeft: `3px solid ${r.color}`, padding: "16px 20px" }}>
+      <div style={{ display: "flex", alignItems: "center", gap: 12, marginBottom: 14, flexWrap: "wrap" }}>
+        <span style={{ fontFamily: "var(--font-body)", fontSize: "0.95rem", fontWeight: 700, background: roleGradient(r.color, r.color_to), WebkitBackgroundClip: r.color_to ? "text" : undefined, WebkitTextFillColor: r.color_to ? "transparent" : undefined, color: r.color_to ? undefined : r.color, flex: 1 }}>
+          {r.name}
+        </span>
+        <span style={{ fontFamily: "var(--font-mono)", fontSize: "0.62rem", padding: "3px 12px", background: roleGradient(r.color, r.color_to), color: "#fff", fontWeight: 700, letterSpacing: "0.08em" }}>
+          {r.name}
+        </span>
+        {r.is_builtin && (
+          <span style={{ ...mono, fontSize: "0.5rem", color: "var(--color-faint)", border: "1px solid var(--color-line)", padding: "2px 7px" }}>Yerleşik</span>
+        )}
+        {!r.is_builtin && (
+          <button onClick={onDelete} style={{ ...mono, fontSize: "0.55rem", padding: "5px 10px", background: "transparent", color: "var(--color-warn)", border: "1px solid var(--color-warn)", cursor: "pointer" }}>Sil</button>
+        )}
+      </div>
+
+      {!r.is_builtin && (
+        <div style={{ marginBottom: 14 }}>
+          <div style={{ ...mono, fontSize: "0.5rem", color: "var(--color-faint)", marginBottom: 8, letterSpacing: "0.18em" }}>Renk Geçişi</div>
+          <div className="flex items-center gap-3 flex-wrap">
+            <div className="flex items-center gap-1">
+              <input type="color" value={color} onChange={(e) => setColor(e.target.value)} style={{ width: 30, height: 30, border: "1px solid var(--color-line)", background: "transparent", cursor: "pointer", padding: 2 }} />
+              <span style={{ ...mono, fontSize: "0.55rem", color: "var(--color-faint)" }}>→</span>
+              <input type="color" value={colorTo} onChange={(e) => setColorTo(e.target.value)} style={{ width: 30, height: 30, border: "1px solid var(--color-line)", background: "transparent", cursor: "pointer", padding: 2 }} />
+            </div>
+            <span style={{ fontFamily: "var(--font-mono)", fontSize: "0.62rem", padding: "3px 12px", background: roleGradient(color, colorTo !== color ? colorTo : null), color: "#fff", fontWeight: 700 }}>
+              {r.name}
+            </span>
+            <button onClick={saveColors} style={{ ...mono, fontSize: "0.55rem", padding: "5px 12px", background: "transparent", border: "1px solid var(--color-accent)", color: "var(--color-accent)", cursor: "pointer" }}>
+              Rengi Kaydet
+            </button>
+          </div>
+        </div>
+      )}
+
+      <div>
+        <div style={{ ...mono, fontSize: "0.5rem", color: "var(--color-faint)", marginBottom: 10, letterSpacing: "0.18em" }}>Yetkiler</div>
+        <div className="flex gap-4 flex-wrap">
+          {PERM_OPTIONS.map(({ key, label }) => (
+            <label key={key} className="flex items-center gap-2 cursor-pointer">
+              <input
+                type="checkbox"
+                checked={r.permissions[key] ?? false}
+                onChange={(e) => onUpdatePermissions({ ...r.permissions, [key]: e.target.checked })}
+              />
+              <span style={{ ...mono, fontSize: "0.58rem", color: r.permissions[key] ? r.color : "var(--color-faint)", fontWeight: r.permissions[key] ? 700 : 400 }}>{label}</span>
+            </label>
+          ))}
+        </div>
+      </div>
     </div>
   )
 }
@@ -247,6 +330,9 @@ export default function AdminDashboard() {
   // Role / multi-admin
   const [adminRole, setAdminRole] = useState<AdminRole | null>(null)
   const [adminDisplayName, setAdminDisplayName] = useState("")
+  const [adminCustomRoleName, setAdminCustomRoleName] = useState<string | null>(null)
+  const [adminCustomRoleColor, setAdminCustomRoleColor] = useState<string | null>(null)
+  const [adminCustomRoleColorTo, setAdminCustomRoleColorTo] = useState<string | null>(null)
 
   interface AdminAccount {
     id: string
@@ -270,6 +356,7 @@ export default function AdminDashboard() {
     id: number
     name: string
     color: string
+    color_to?: string | null
     permissions: Record<string, boolean>
     is_builtin: boolean
     created_at: string
@@ -277,6 +364,7 @@ export default function AdminDashboard() {
   const [adminRoles, setAdminRoles] = useState<AdminRoleDb[]>([])
   const [newRoleName, setNewRoleName] = useState("")
   const [newRoleColor, setNewRoleColor] = useState("#5865f2")
+  const [newRoleColorTo, setNewRoleColorTo] = useState("#a855f7")
   const [newRolePerms, setNewRolePerms] = useState<Record<string, boolean>>({ announce: false, images: false, forum: false, accounts: false })
   const [roleSaving, setRoleSaving] = useState(false)
 
@@ -289,6 +377,9 @@ export default function AdminDashboard() {
         if (d?.role) {
           setAdminRole(d.role as AdminRole)
           if (d.displayName) setAdminDisplayName(d.displayName)
+          if (d.customRoleName) setAdminCustomRoleName(d.customRoleName)
+          if (d.customRoleColor) setAdminCustomRoleColor(d.customRoleColor)
+          if (d.customRoleColorTo) setAdminCustomRoleColorTo(d.customRoleColorTo)
           if (d.role === "interview") setTab("applications")
         }
       })
@@ -556,11 +647,13 @@ export default function AdminDashboard() {
     e.preventDefault()
     if (!newRoleName.trim()) return
     setRoleSaving(true)
-    const res = await fetch("/api/admin/roles", { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ name: newRoleName.trim(), color: newRoleColor, permissions: newRolePerms }) })
+    const res = await fetch("/api/admin/roles", { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ name: newRoleName.trim(), color: newRoleColor, color_to: newRoleColorTo || null, permissions: newRolePerms }) })
     if (res.ok) {
       const created = await res.json()
       setAdminRoles(p => [...p, created])
       setNewRoleName("")
+      setNewRoleColor("#5865f2")
+      setNewRoleColorTo("#a855f7")
       setNewRolePerms({ announce: false, images: false, forum: false, accounts: false })
     }
     setRoleSaving(false)
@@ -568,6 +661,11 @@ export default function AdminDashboard() {
 
   const updateRolePermissions = async (id: number, permissions: Record<string, boolean>) => {
     const res = await fetch("/api/admin/roles", { method: "PATCH", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ id, permissions }) })
+    if (res.ok) { const updated = await res.json(); setAdminRoles(p => p.map(r => r.id === id ? updated : r)) }
+  }
+
+  const updateRoleColors = async (id: number, color: string, color_to: string | null) => {
+    const res = await fetch("/api/admin/roles", { method: "PATCH", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ id, color, color_to }) })
     if (res.ok) { const updated = await res.json(); setAdminRoles(p => p.map(r => r.id === id ? updated : r)) }
   }
 
@@ -879,16 +977,30 @@ export default function AdminDashboard() {
 
         {/* Discord profile + role + logout */}
         <div className="flex items-center gap-4">
-          {adminRole && (
-            <span style={{
-              ...mono, fontSize: "0.52rem", padding: "4px 10px",
-              border: `1px solid ${adminRole === "founder" ? "var(--color-accent)" : adminRole === "moderator" ? "oklch(0.72 0.16 230)" : "var(--color-status-on)"}`,
-              color: adminRole === "founder" ? "var(--color-accent)" : adminRole === "moderator" ? "oklch(0.72 0.16 230)" : "var(--color-status-on)",
-              background: "transparent",
-            }}>
-              {adminRole === "founder" ? "● Developer" : adminRole === "moderator" ? "● Moderatör" : "● Mülakat"}
-            </span>
-          )}
+          {adminRole && (() => {
+            const label = adminRole === "founder"
+              ? "● Developer"
+              : adminCustomRoleName
+                ? `● ${adminCustomRoleName}`
+                : adminRole === "moderator" ? "● Moderatör" : "● Mülakat"
+            const hasGradient = adminRole !== "founder" && adminCustomRoleColor && adminCustomRoleColorTo
+            const bg = hasGradient
+              ? `linear-gradient(135deg, ${adminCustomRoleColor}, ${adminCustomRoleColorTo})`
+              : "transparent"
+            const borderColor = adminRole === "founder"
+              ? "var(--color-accent)"
+              : adminCustomRoleColor ?? (adminRole === "moderator" ? "oklch(0.72 0.16 230)" : "var(--color-status-on)")
+            const textColor = hasGradient
+              ? "#fff"
+              : adminRole === "founder"
+                ? "var(--color-accent)"
+                : adminCustomRoleColor ?? (adminRole === "moderator" ? "oklch(0.72 0.16 230)" : "var(--color-status-on)")
+            return (
+              <span style={{ ...mono, fontSize: "0.52rem", padding: "4px 10px", border: `1px solid ${borderColor}`, color: textColor, background: bg }}>
+                {label}
+              </span>
+            )
+          })()}
           {session?.user ? (
             <div className="flex items-center gap-3">
               {session.user.image ? (
@@ -1358,7 +1470,12 @@ export default function AdminDashboard() {
                   <div key={acc.id} style={{ background: "var(--color-bg-2)", border: "1px solid var(--color-line)", padding: "16px 20px" }}>
                     <div style={{ display: "flex", alignItems: "center", gap: 12, flexWrap: "wrap", marginBottom: 14 }}>
                       <span style={{ fontFamily: "var(--font-body)", fontSize: "0.95rem", fontWeight: 600, color: "var(--color-txt)", flex: 1, minWidth: 120 }}>{acc.username}</span>
-                      <span style={{ ...mono, fontSize: "0.56rem", color: assignedRole ? assignedRole.color : (acc.role === "moderator" ? "oklch(0.72 0.16 230)" : "var(--color-status-on)"), border: `1px solid ${assignedRole ? assignedRole.color : (acc.role === "moderator" ? "oklch(0.72 0.16 230)" : "var(--color-status-on)")}`, padding: "3px 8px" }}>
+                      <span style={{
+                        ...mono, fontSize: "0.56rem", padding: "3px 8px",
+                        background: assignedRole?.color_to ? roleGradient(assignedRole.color, assignedRole.color_to) : "transparent",
+                        border: `1px solid ${assignedRole ? assignedRole.color : (acc.role === "moderator" ? "oklch(0.72 0.16 230)" : "var(--color-status-on)")}`,
+                        color: assignedRole?.color_to ? "#fff" : (assignedRole ? assignedRole.color : (acc.role === "moderator" ? "oklch(0.72 0.16 230)" : "var(--color-status-on)")),
+                      }}>
                         {assignedRole ? assignedRole.name : (acc.role === "moderator" ? "Moderatör" : "Mülakat")}
                       </span>
                       <span style={{ ...mono, fontSize: "0.56rem", color: acc.is_active ? "var(--color-status-on)" : "var(--color-warn)" }}>
@@ -1651,16 +1768,16 @@ export default function AdminDashboard() {
                   />
                 </label>
                 <label style={{ display: "flex", flexDirection: "column", gap: 6 }}>
-                  <span style={{ ...mono, fontSize: "0.55rem", color: "var(--color-faint)" }}>Renk</span>
-                  <div className="flex items-center gap-3">
-                    <input
-                      type="color"
-                      value={newRoleColor}
-                      onChange={(e) => setNewRoleColor(e.target.value)}
-                      style={{ width: 40, height: 36, border: "1px solid var(--color-line)", background: "transparent", cursor: "pointer", padding: 2 }}
-                    />
-                    <span style={{ ...mono, fontSize: "0.65rem", color: "var(--color-muted)" }}>{newRoleColor}</span>
-                    <span style={{ ...mono, fontSize: "0.65rem", padding: "3px 12px", background: newRoleColor, color: "#fff", fontWeight: 700 }}>{newRoleName || "Rol Adı"}</span>
+                  <span style={{ ...mono, fontSize: "0.55rem", color: "var(--color-faint)" }}>Renk Geçişi</span>
+                  <div className="flex items-center gap-3 flex-wrap">
+                    <div className="flex items-center gap-1">
+                      <input type="color" value={newRoleColor} onChange={(e) => setNewRoleColor(e.target.value)} style={{ width: 32, height: 32, border: "1px solid var(--color-line)", background: "transparent", cursor: "pointer", padding: 2 }} />
+                      <span style={{ ...mono, fontSize: "0.55rem", color: "var(--color-faint)" }}>→</span>
+                      <input type="color" value={newRoleColorTo} onChange={(e) => setNewRoleColorTo(e.target.value)} style={{ width: 32, height: 32, border: "1px solid var(--color-line)", background: "transparent", cursor: "pointer", padding: 2 }} />
+                    </div>
+                    <span style={{ ...mono, fontSize: "0.7rem", padding: "4px 14px", background: roleGradient(newRoleColor, newRoleColorTo), color: "#fff", fontWeight: 700, letterSpacing: "0.08em" }}>
+                      {newRoleName || "Rol Adı"}
+                    </span>
                   </div>
                 </label>
               </div>
@@ -1695,33 +1812,14 @@ export default function AdminDashboard() {
           ) : (
             <div style={{ display: "flex", flexDirection: "column", gap: 12 }}>
               {adminRoles.map((r) => (
-                <div key={r.id} style={{ background: "var(--color-bg-2)", border: `1px solid ${r.color}50`, padding: "16px 20px" }}>
-                  <div style={{ display: "flex", alignItems: "center", gap: 12, marginBottom: 14, flexWrap: "wrap" }}>
-                    <div style={{ width: 12, height: 12, borderRadius: "50%", background: r.color, flexShrink: 0 }} />
-                    <span style={{ fontFamily: "var(--font-body)", fontSize: "0.95rem", fontWeight: 700, color: r.color, flex: 1 }}>{r.name}</span>
-                    {r.is_builtin && (
-                      <span style={{ ...mono, fontSize: "0.5rem", color: "var(--color-faint)", border: "1px solid var(--color-line)", padding: "2px 7px" }}>Yerleşik</span>
-                    )}
-                    {!r.is_builtin && (
-                      <button onClick={() => deleteRole(r.id, r.name)} style={{ ...mono, fontSize: "0.55rem", padding: "5px 10px", background: "transparent", color: "var(--color-warn)", border: "1px solid var(--color-warn)", cursor: "pointer" }}>Sil</button>
-                    )}
-                  </div>
-                  <div>
-                    <div style={{ ...mono, fontSize: "0.5rem", color: "var(--color-faint)", marginBottom: 10, letterSpacing: "0.18em" }}>Yetkiler</div>
-                    <div className="flex gap-4 flex-wrap">
-                      {PERM_OPTIONS.map(({ key, label }) => (
-                        <label key={key} className="flex items-center gap-2 cursor-pointer">
-                          <input
-                            type="checkbox"
-                            checked={r.permissions[key] ?? false}
-                            onChange={(e) => updateRolePermissions(r.id, { ...r.permissions, [key]: e.target.checked })}
-                          />
-                          <span style={{ ...mono, fontSize: "0.58rem", color: r.permissions[key] ? r.color : "var(--color-faint)", fontWeight: r.permissions[key] ? 700 : 400 }}>{label}</span>
-                        </label>
-                      ))}
-                    </div>
-                  </div>
-                </div>
+                <RoleCard
+                  key={r.id}
+                  role={r}
+                  onUpdatePermissions={(perms) => updateRolePermissions(r.id, perms)}
+                  onUpdateColors={(c, ct) => updateRoleColors(r.id, c, ct)}
+                  onDelete={() => deleteRole(r.id, r.name)}
+                  mono={mono}
+                />
               ))}
             </div>
           )}

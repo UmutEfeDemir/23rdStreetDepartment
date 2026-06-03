@@ -11,13 +11,13 @@ export async function GET() {
 
 export async function POST(req: NextRequest) {
   if (!(await isFounder())) return Response.json({ error: "Yetkisiz" }, { status: 403 })
-  const { name, color, permissions } = await req.json()
+  const { name, color, color_to, permissions } = await req.json()
   if (!name?.trim()) return Response.json({ error: "İsim gerekli" }, { status: 400 })
   const sql = getDb()
   try {
     const rows = await sql`
-      INSERT INTO admin_roles (name, color, permissions)
-      VALUES (${name.trim()}, ${color ?? "#5865f2"}, ${JSON.stringify(permissions ?? {})}::jsonb)
+      INSERT INTO admin_roles (name, color, color_to, permissions)
+      VALUES (${name.trim()}, ${color ?? "#5865f2"}, ${color_to ?? null}, ${JSON.stringify(permissions ?? {})}::jsonb)
       RETURNING *
     `
     return Response.json(rows[0])
@@ -30,11 +30,12 @@ export async function POST(req: NextRequest) {
 
 export async function PATCH(req: NextRequest) {
   if (!(await isFounder())) return Response.json({ error: "Yetkisiz" }, { status: 403 })
-  const { id, name, color, permissions } = await req.json()
+  const { id, name, color, color_to, permissions } = await req.json()
   if (!id) return Response.json({ error: "ID gerekli" }, { status: 400 })
   const sql = getDb()
   if (name) await sql`UPDATE admin_roles SET name = ${name} WHERE id = ${id} AND is_builtin = FALSE`
   if (color) await sql`UPDATE admin_roles SET color = ${color} WHERE id = ${id}`
+  if (color_to !== undefined) await sql`UPDATE admin_roles SET color_to = ${color_to ?? null} WHERE id = ${id}`
   if (permissions !== undefined) {
     await sql`UPDATE admin_roles SET permissions = ${JSON.stringify(permissions)}::jsonb WHERE id = ${id}`
   }
