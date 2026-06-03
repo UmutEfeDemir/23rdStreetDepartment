@@ -8,7 +8,7 @@ export async function GET() {
   const cookieStore = await cookies()
   const session = cookieStore.get("admin_session")?.value ?? ""
 
-  let displayName = "Kurucu"
+  let displayName = "Developer"
   if (session.startsWith("acc_")) {
     try {
       const { getDb } = await import("@/lib/db")

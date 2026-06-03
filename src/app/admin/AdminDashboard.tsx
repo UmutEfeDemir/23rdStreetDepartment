@@ -140,6 +140,26 @@ function OfficerFormFields({ form, setForm }: { form: OfficerForm; setForm: (f: 
   )
 }
 
+function DiscordIdInput({ initialValue, onSave }: { initialValue: string; onSave: (val: string) => void }) {
+  const [value, setValue] = useState(initialValue)
+  const [saved, setSaved] = useState(false)
+  const save = () => { onSave(value.trim()); setSaved(true); setTimeout(() => setSaved(false), 1500) }
+  return (
+    <div className="flex items-center gap-2" style={{ flex: 1 }}>
+      <input
+        value={value}
+        onChange={(e) => { setValue(e.target.value); setSaved(false) }}
+        onKeyDown={(e) => e.key === "Enter" && save()}
+        placeholder="Discord User ID (örn. 123456789012345678)"
+        style={{ flex: 1, background: "var(--color-bg)", border: "1px solid var(--color-line)", color: "var(--color-txt)", padding: "5px 10px", fontFamily: "var(--font-mono)", fontSize: "0.62rem", outline: "none" }}
+      />
+      <button onClick={save} style={{ fontFamily: "var(--font-mono)", fontSize: "0.55rem", letterSpacing: "0.1em", textTransform: "uppercase", padding: "5px 12px", background: "transparent", border: "1px solid var(--color-line)", color: saved ? "var(--color-status-on)" : "var(--color-faint)", cursor: "pointer" }}>
+        {saved ? "✓" : "Kaydet"}
+      </button>
+    </div>
+  )
+}
+
 function NoteInput({ initialValue, onSave }: { initialValue: string; onSave: (val: string) => void }) {
   const [value, setValue] = useState(initialValue)
   const [saved, setSaved] = useState(false)
@@ -237,6 +257,7 @@ export default function AdminDashboard() {
     is_active: boolean
     permissions: Record<string, boolean>
     role_id?: number | null
+    discord_id?: string | null
   }
   const [accounts, setAccounts] = useState<AdminAccount[]>([])
   const [newAccUsername, setNewAccUsername] = useState("")
@@ -865,7 +886,7 @@ export default function AdminDashboard() {
               color: adminRole === "founder" ? "var(--color-accent)" : adminRole === "moderator" ? "oklch(0.72 0.16 230)" : "var(--color-status-on)",
               background: "transparent",
             }}>
-              {adminRole === "founder" ? "● Kurucu" : adminRole === "moderator" ? "● Moderatör" : "● Mülakat"}
+              {adminRole === "founder" ? "● Developer" : adminRole === "moderator" ? "● Moderatör" : "● Mülakat"}
             </span>
           )}
           {session?.user ? (
@@ -1337,8 +1358,8 @@ export default function AdminDashboard() {
                   <div key={acc.id} style={{ background: "var(--color-bg-2)", border: "1px solid var(--color-line)", padding: "16px 20px" }}>
                     <div style={{ display: "flex", alignItems: "center", gap: 12, flexWrap: "wrap", marginBottom: 14 }}>
                       <span style={{ fontFamily: "var(--font-body)", fontSize: "0.95rem", fontWeight: 600, color: "var(--color-txt)", flex: 1, minWidth: 120 }}>{acc.username}</span>
-                      <span style={{ ...mono, fontSize: "0.56rem", color: acc.role === "moderator" ? "oklch(0.72 0.16 230)" : "var(--color-status-on)", border: `1px solid ${acc.role === "moderator" ? "oklch(0.72 0.16 230)" : "var(--color-status-on)"}`, padding: "3px 8px" }}>
-                        {acc.role === "moderator" ? "Moderatör" : "Mülakat"}
+                      <span style={{ ...mono, fontSize: "0.56rem", color: assignedRole ? assignedRole.color : (acc.role === "moderator" ? "oklch(0.72 0.16 230)" : "var(--color-status-on)"), border: `1px solid ${assignedRole ? assignedRole.color : (acc.role === "moderator" ? "oklch(0.72 0.16 230)" : "var(--color-status-on)")}`, padding: "3px 8px" }}>
+                        {assignedRole ? assignedRole.name : (acc.role === "moderator" ? "Moderatör" : "Mülakat")}
                       </span>
                       <span style={{ ...mono, fontSize: "0.56rem", color: acc.is_active ? "var(--color-status-on)" : "var(--color-warn)" }}>
                         {acc.is_active ? "● Aktif" : "● Pasif"}
@@ -1352,7 +1373,7 @@ export default function AdminDashboard() {
                       </div>
                     </div>
                     {/* Role assignment */}
-                    <div style={{ borderTop: "1px solid var(--color-line)", paddingTop: 12 }}>
+                    <div style={{ borderTop: "1px solid var(--color-line)", paddingTop: 12, marginBottom: 12 }}>
                       <div style={{ ...mono, fontSize: "0.5rem", color: "var(--color-faint)", marginBottom: 10, letterSpacing: "0.18em" }}>Özel Rol Ata</div>
                       <div className="flex items-start gap-4 flex-wrap">
                         <select
@@ -1376,6 +1397,34 @@ export default function AdminDashboard() {
                               )
                             })}
                           </div>
+                        )}
+                      </div>
+                    </div>
+                    {/* Discord ID verification */}
+                    <div style={{ borderTop: "1px solid var(--color-line)", paddingTop: 12 }}>
+                      <div style={{ ...mono, fontSize: "0.5rem", color: "var(--color-faint)", marginBottom: 6, letterSpacing: "0.18em" }}>
+                        Discord Doğrulama
+                        <span style={{ fontFamily: "var(--font-mono)", fontSize: "0.48rem", letterSpacing: "0.06em", textTransform: "none", color: "var(--color-faint)", marginLeft: 8 }}>
+                          — Ayarlanırsa giriş sırasında Discord hesabı eşleşmeli
+                        </span>
+                      </div>
+                      <div className="flex items-center gap-2">
+                        {acc.discord_id ? (
+                          // eslint-disable-next-line @next/next/no-img-element
+                          <img src={`https://cdn.discordapp.com/embed/avatars/0.png`} alt="" className="rounded-full" style={{ width: 24, height: 24, border: "1px solid #5865F2", flexShrink: 0 }} />
+                        ) : (
+                          <div className="rounded-full flex items-center justify-center" style={{ width: 24, height: 24, background: "var(--color-bg-3)", border: "1px solid var(--color-line)", flexShrink: 0, ...mono, fontSize: "0.45rem", color: "var(--color-faint)" }}>DC</div>
+                        )}
+                        <DiscordIdInput
+                          initialValue={acc.discord_id ?? ""}
+                          onSave={(val) => {
+                            fetch("/api/admin/accounts", { method: "PATCH", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ id: acc.id, discord_id: val || null }) })
+                              .then(r => r.ok ? r.json() : null)
+                              .then(d => { if (d) setAccounts(p => p.map(a => a.id === acc.id ? d : a)) })
+                          }}
+                        />
+                        {acc.discord_id && (
+                          <span style={{ ...mono, fontSize: "0.52rem", color: "var(--color-status-on)", border: "1px solid var(--color-status-on)", padding: "2px 7px" }}>✓ Bağlı</span>
                         )}
                       </div>
                     </div>

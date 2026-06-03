@@ -95,12 +95,12 @@ export default function AdminLoginPage() {
               type="text"
               value={username}
               onChange={(e) => setUsername(e.target.value)}
-              placeholder="Kurucu girişi için boş bırakın"
+              placeholder="Developer girişi için boş bırakın"
               style={fieldStyle}
               autoComplete="username"
             />
             <p style={{ ...mono, fontSize: "0.52rem", color: "var(--color-faint)", marginTop: 5, textTransform: "none", letterSpacing: "0.06em" }}>
-              Alt hesap için kullanıcı adı girin. Kurucu girişi için boş bırakın.
+              Alt hesap için kullanıcı adı girin. Developer girişi için boş bırakın.
             </p>
           </div>
 

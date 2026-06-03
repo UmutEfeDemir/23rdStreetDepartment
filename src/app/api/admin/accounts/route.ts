@@ -13,7 +13,7 @@ export async function GET() {
   if (!(await isFounder())) return Response.json({ error: "Yetkisiz" }, { status: 403 })
   const sql = getDb()
   const rows = await sql`
-    SELECT id, username, role, created_by, created_at, is_active, permissions, role_id
+    SELECT id, username, role, created_by, created_at, is_active, permissions, role_id, discord_id
     FROM admin_accounts
     ORDER BY created_at ASC
   `
@@ -36,7 +36,7 @@ export async function POST(req: NextRequest) {
     const rows = await sql`
       INSERT INTO admin_accounts (username, password_hash, role)
       VALUES (${username.trim()}, ${hashPassword(password)}, ${role})
-      RETURNING id, username, role, created_by, created_at, is_active, permissions, role_id
+      RETURNING id, username, role, created_by, created_at, is_active, permissions, role_id, discord_id
     `
     return Response.json(rows[0])
   } catch (e: unknown) {
@@ -48,7 +48,7 @@ export async function POST(req: NextRequest) {
 
 export async function PATCH(req: NextRequest) {
   if (!(await isFounder())) return Response.json({ error: "Yetkisiz" }, { status: 403 })
-  const { id, is_active, role, password, permissions, role_id } = await req.json()
+  const { id, is_active, role, password, permissions, role_id, discord_id } = await req.json()
   if (!id) return Response.json({ error: "ID gerekli" }, { status: 400 })
   const sql = getDb()
   if (typeof password === "string" && password.length >= 6) {
@@ -70,8 +70,15 @@ export async function PATCH(req: NextRequest) {
       await sql`UPDATE admin_accounts SET role_id = ${role_id} WHERE id = ${id}`
     }
   }
+  if (discord_id !== undefined) {
+    if (discord_id === null || discord_id === "") {
+      await sql`UPDATE admin_accounts SET discord_id = NULL WHERE id = ${id}`
+    } else {
+      await sql`UPDATE admin_accounts SET discord_id = ${discord_id} WHERE id = ${id}`
+    }
+  }
   const rows = await sql`
-    SELECT id, username, role, created_by, created_at, is_active, permissions, role_id
+    SELECT id, username, role, created_by, created_at, is_active, permissions, role_id, discord_id
     FROM admin_accounts WHERE id = ${id} LIMIT 1
   `
   return Response.json(rows[0])

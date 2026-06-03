@@ -1,6 +1,7 @@
 import { cookies } from "next/headers"
 import { type NextRequest } from "next/server"
 import crypto from "crypto"
+import { auth } from "@/auth"
 
 function verifyPassword(password: string, stored: string): boolean {
   try {
@@ -23,11 +24,19 @@ export async function POST(req: NextRequest) {
     sameSite: "lax" as const,
   }
 
-  // Master password login (no username = founder)
+  // Master password login (no username = founder/developer)
   if (!username?.trim()) {
     const correct = process.env.ADMIN_PASSWORD ?? "23rdhc1@"
     if (password !== correct) {
       return Response.json({ error: "Şifre hatalı" }, { status: 401 })
+    }
+    const founderDiscordId = process.env.FOUNDER_DISCORD_ID
+    if (founderDiscordId) {
+      const session = await auth()
+      const sessionDiscordId = (session?.user as { discordId?: string } | undefined)?.discordId
+      if (!sessionDiscordId || sessionDiscordId !== founderDiscordId) {
+        return Response.json({ error: "Developer girişi için önce Discord hesabınızla giriş yapın." }, { status: 403 })
+      }
     }
     cookieStore.set("admin_session", "founder", cookieOpts)
     return Response.json({ success: true, role: "founder" })
@@ -43,9 +52,17 @@ export async function POST(req: NextRequest) {
       WHERE username = ${username.trim()}
       LIMIT 1
     `
-    const acc = rows[0] as { id: string; password_hash: string; role: string; is_active: boolean } | undefined
+    const acc = rows[0] as { id: string; password_hash: string; role: string; is_active: boolean; discord_id: string | null } | undefined
     if (!acc || !acc.is_active || !verifyPassword(password, acc.password_hash)) {
       return Response.json({ error: "Kullanıcı adı veya şifre hatalı" }, { status: 401 })
+    }
+    // Discord doğrulama — hesaba bir Discord ID bağlıysa oturum eşleşmeli
+    if (acc.discord_id) {
+      const session = await auth()
+      const sessionDiscordId = (session?.user as { discordId?: string } | undefined)?.discordId
+      if (!sessionDiscordId || sessionDiscordId !== acc.discord_id) {
+        return Response.json({ error: "Discord hesabınız bu hesapla eşleşmiyor. Önce Discord ile giriş yapın." }, { status: 403 })
+      }
     }
     cookieStore.set("admin_session", `acc_${acc.id}`, cookieOpts)
     return Response.json({ success: true, role: acc.role })
