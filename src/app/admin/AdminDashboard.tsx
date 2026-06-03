@@ -1117,6 +1117,23 @@ export default function AdminDashboard() {
       {/* ── Officers tab ── */}
       {tab === "officers" && (
         <div style={{ padding: "24px clamp(20px,4vw,48px)" }}>
+          {/* Avatar sync */}
+          <div style={{ display: "flex", justifyContent: "flex-end", marginBottom: 12 }}>
+            <button
+              onClick={async () => {
+                const res = await fetch("/api/admin/sync-avatars", { method: "POST" })
+                if (res.ok) {
+                  const d = await res.json()
+                  alert(`${d.updated} memur güncellendi, ${d.failed} başarısız (toplam ${d.total})`)
+                  const r2 = await fetch("/api/officers")
+                  if (r2.ok) { const d2 = await r2.json(); setOfficers(Array.isArray(d2) ? d2.sort((a, b) => Number(a.badge_no) - Number(b.badge_no)) : []) }
+                }
+              }}
+              style={{ ...mono, fontSize: "0.58rem", padding: "7px 16px", background: "transparent", color: "oklch(0.72 0.16 230)", border: "1px solid oklch(0.72 0.16 230)", cursor: "pointer" }}
+            >
+              ↺ Discord Avatarlarını Senkronize Et
+            </button>
+          </div>
           {/* Add form */}
           <div style={{ background: "var(--color-bg-2)", border: "1px solid var(--color-line)", padding: 24, marginBottom: 32 }}>
             <div style={{ ...mono, fontSize: "0.65rem", color: "var(--color-accent)", marginBottom: 20 }}>Yeni Memur Ekle</div>
