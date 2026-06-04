@@ -168,7 +168,11 @@ export default function PersonnelPanel() {
   }, [])
 
   useEffect(() => {
-    if (session) fetchDuty()
+    if (!session) return
+    fetchDuty()
+    // Discord bot'tan gelen mesai değişikliklerini yakalamak için polling
+    const interval = setInterval(fetchDuty, 30_000)
+    return () => clearInterval(interval)
   }, [session, fetchDuty])
 
   const clockIn = async () => {
