@@ -25,6 +25,10 @@ export const metadata: Metadata = {
   title: "23rd Street Department",
   description: "23rd Street Departmanı. Koru ve Hizmet Et.",
   keywords: "FiveM, GTA RP, SASP, San Andreas, polis, roleplay",
+  icons: {
+    icon: "/logo.png",
+    apple: "/logo.png",
+  },
 }
 
 export default function RootLayout({

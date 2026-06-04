@@ -10,7 +10,7 @@ export type Rank =
   | "Trooper"
   | "Cadet"
 
-export type Unit = "High Command" | "Sup. Command" | "Supervisor" | "Polis"
+export type Unit = "High Command" | "Sup. Command" | "Supervisor" | "Detective Supervisor" | "Polis"
 
 export type OfficerStatus = "Görevde" | "Aktif" | "İzinli" | "Eğitimde"
 
@@ -18,6 +18,7 @@ export const UNIT_LABELS: Record<Unit, string> = {
   "High Command": "High Command",
   "Sup. Command": "Sup. Command",
   "Supervisor": "Supervisor",
+  "Detective Supervisor": "Detective Supervisor",
   "Polis": "Polis",
 }
 

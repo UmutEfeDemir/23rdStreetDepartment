@@ -3,7 +3,7 @@
 import { useState, useEffect, useRef } from "react"
 import Image from "next/image"
 
-type UnitFilter = "TÜM" | "High Command" | "Sup. Command" | "Supervisor" | "Polis"
+type UnitFilter = "TÜM" | "High Command" | "Sup. Command" | "Supervisor" | "Detective Supervisor" | "Polis"
 
 interface OfficerRow {
   id: string
@@ -19,7 +19,7 @@ interface OfficerRow {
   duty_hours?: number
 }
 
-const UNITS: UnitFilter[] = ["TÜM", "High Command", "Sup. Command", "Supervisor", "Polis"]
+const UNITS: UnitFilter[] = ["TÜM", "High Command", "Sup. Command", "Supervisor", "Detective Supervisor", "Polis"]
 
 function nameToAvatar(name: string) {
   return `/gallery/${name.trim().toLowerCase().replace(/\s+/g, "-").replace(/[^a-z0-9-]/g, "").replace(/^-+|-+$/g, "")}.png`
