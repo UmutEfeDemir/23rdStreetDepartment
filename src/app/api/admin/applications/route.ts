@@ -2,30 +2,57 @@ import { type NextRequest } from "next/server"
 import { isAnyAdmin, isAtLeastModerator } from "@/lib/adminAuth"
 
 async function sendDiscordNotification(discordId: string, status: string, reason?: string, rejectedBy?: string) {
-  const webhookUrl = process.env.DISCORD_NOTIFY_WEBHOOK_URL
-  if (!webhookUrl || webhookUrl === "...") return
+  const mulakatWebhook = process.env.DISCORD_MULAKAT_WEBHOOK_URL
+  const sonucWebhook = process.env.DISCORD_SONUC_WEBHOOK_URL
+  // Eski tek webhook'u fallback olarak kullan
+  const fallback = process.env.DISCORD_NOTIFY_WEBHOOK_URL
 
   const tag = discordId ? `<@${discordId}>` : "Başvuru Sahibi"
+  let embed: Record<string, unknown>
+  let webhookUrl: string | undefined
 
-  let embed
   if (status === "interview") {
+    webhookUrl = mulakatWebhook || fallback
+    if (!webhookUrl || webhookUrl === "...") return
     embed = {
-      title: "📋 Mülakat Daveti",
+      title: "📋 Mülakat Çağrısı",
       color: 0x3b82f6,
-      description: `${tag} — Başvurunuz **mülakat** aşamasına alınmıştır. Lütfen mülakat kanalına geçin.`,
-      footer: { text: "23rd Street Department — SASP" },
+      description: `${tag} — Başvurunuz **mülakat** aşamasına alındı.\nLütfen mülakat kanalına geçin.`,
+      footer: { text: "23rd Street Department" },
+      timestamp: new Date().toISOString(),
+    }
+  } else if (status === "accepted") {
+    webhookUrl = sonucWebhook || fallback
+    if (!webhookUrl || webhookUrl === "...") return
+    embed = {
+      title: "✅ Başvuru Kabul Edildi",
+      color: 0x22c55e,
+      description: `${tag} — Başvurunuz **kabul** edilmiştir. Hoş geldiniz!`,
+      footer: { text: "23rd Street Department" },
+      timestamp: new Date().toISOString(),
+    }
+  } else if (status === "completed") {
+    webhookUrl = sonucWebhook || fallback
+    if (!webhookUrl || webhookUrl === "...") return
+    embed = {
+      title: "🏁 Süreç Tamamlandı",
+      color: 0x6366f1,
+      description: `${tag} — Mülakat süreci tamamlandı.`,
+      footer: { text: "23rd Street Department" },
       timestamp: new Date().toISOString(),
     }
   } else if (status === "rejected") {
+    webhookUrl = sonucWebhook || fallback
+    if (!webhookUrl || webhookUrl === "...") return
     embed = {
-      title: "❌ Başvuru Sonucu",
+      title: "❌ Başvuru Reddedildi",
       color: 0xef4444,
-      description: `${tag} — Başvurunuz reddedilmiştir.`,
+      description: `${tag} — Başvurunuz **reddedildi**.`,
       fields: [
         ...(reason ? [{ name: "Sebep", value: reason }] : []),
         ...(rejectedBy ? [{ name: "Değerlendiren", value: rejectedBy, inline: true }] : []),
       ],
-      footer: { text: "23rd Street Department — SASP" },
+      footer: { text: "23rd Street Department" },
       timestamp: new Date().toISOString(),
     }
   } else {
@@ -69,7 +96,7 @@ export async function PATCH(req: NextRequest) {
   }
 
   const { id, status, rejection_reason, rejected_by } = await req.json()
-  const validStatuses = ["pending", "interview", "accepted", "rejected"]
+  const validStatuses = ["pending", "interview", "accepted", "rejected", "completed"]
   if (!id || !validStatuses.includes(status)) {
     return Response.json({ error: "Geçersiz veri" }, { status: 400 })
   }
@@ -86,7 +113,7 @@ export async function PATCH(req: NextRequest) {
         WHERE id = ${id}
       `
 
-      if (status === "interview" || status === "rejected") {
+      if (["interview", "accepted", "rejected", "completed"].includes(status)) {
         const rows = await sql`SELECT discord_id FROM applications WHERE id = ${id} LIMIT 1`
         const discordId = (rows[0] as { discord_id?: string } | undefined)?.discord_id ?? ""
         await sendDiscordNotification(discordId, status, rejection_reason, rejected_by)
