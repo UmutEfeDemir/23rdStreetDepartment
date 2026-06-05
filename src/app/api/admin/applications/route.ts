@@ -1,69 +1,67 @@
 import { type NextRequest } from "next/server"
 import { isAnyAdmin, isAtLeastModerator } from "@/lib/adminAuth"
 
-async function sendDiscordNotification(discordId: string, status: string, reason?: string, rejectedBy?: string) {
-  const mulakatWebhook = process.env.DISCORD_MULAKAT_WEBHOOK_URL
-  const sonucWebhook = process.env.DISCORD_SONUC_WEBHOOK_URL
-  // Eski tek webhook'u fallback olarak kullan
-  const fallback = process.env.DISCORD_NOTIFY_WEBHOOK_URL
-
-  const tag = discordId ? `<@${discordId}>` : "Başvuru Sahibi"
-  let embed: Record<string, unknown>
-  let webhookUrl: string | undefined
-
-  if (status === "interview") {
-    webhookUrl = mulakatWebhook || fallback
-    if (!webhookUrl || webhookUrl === "...") return
-    embed = {
-      title: "📋 Mülakat Çağrısı",
-      color: 0x3b82f6,
-      description: `${tag} — Başvurunuz **mülakat** aşamasına alındı.\nLütfen mülakat kanalına geçin.`,
-      footer: { text: "23rd Street Department" },
-      timestamp: new Date().toISOString(),
-    }
-  } else if (status === "accepted") {
-    webhookUrl = sonucWebhook || fallback
-    if (!webhookUrl || webhookUrl === "...") return
-    embed = {
-      title: "✅ Başvuru Kabul Edildi",
-      color: 0x22c55e,
-      description: `${tag} — Başvurunuz **kabul** edilmiştir. Hoş geldiniz!`,
-      footer: { text: "23rd Street Department" },
-      timestamp: new Date().toISOString(),
-    }
-  } else if (status === "completed") {
-    webhookUrl = sonucWebhook || fallback
-    if (!webhookUrl || webhookUrl === "...") return
-    embed = {
-      title: "🏁 Süreç Tamamlandı",
-      color: 0x6366f1,
-      description: `${tag} — Mülakat süreci tamamlandı.`,
-      footer: { text: "23rd Street Department" },
-      timestamp: new Date().toISOString(),
-    }
-  } else if (status === "rejected") {
-    webhookUrl = sonucWebhook || fallback
-    if (!webhookUrl || webhookUrl === "...") return
-    embed = {
-      title: "❌ Başvuru Reddedildi",
-      color: 0xef4444,
-      description: `${tag} — Başvurunuz **reddedildi**.`,
-      fields: [
-        ...(reason ? [{ name: "Sebep", value: reason }] : []),
-        ...(rejectedBy ? [{ name: "Değerlendiren", value: rejectedBy, inline: true }] : []),
-      ],
-      footer: { text: "23rd Street Department" },
-      timestamp: new Date().toISOString(),
-    }
-  } else {
-    return
-  }
-
-  await fetch(webhookUrl, {
+async function postToChannel(channelId: string, payload: Record<string, unknown>) {
+  const token = process.env.DISCORD_BOT_TOKEN
+  if (!token || !channelId) return
+  await fetch(`https://discord.com/api/v10/channels/${channelId}/messages`, {
     method: "POST",
-    headers: { "Content-Type": "application/json" },
-    body: JSON.stringify({ embeds: [embed] }),
-  }).catch((e) => console.error("Notify webhook error:", e))
+    headers: { Authorization: `Bot ${token}`, "Content-Type": "application/json" },
+    body: JSON.stringify(payload),
+  }).catch((e) => console.error("Discord channel post error:", e))
+}
+
+async function sendDiscordNotification(discordId: string, status: string, reason?: string, rejectedBy?: string) {
+  const mulakatChannelId = process.env.DISCORD_MULAKAT_CHANNEL_ID
+  const sonucChannelId = process.env.DISCORD_SONUC_CHANNEL_ID
+  const tag = discordId ? `<@${discordId}>` : "Başvuru Sahibi"
+
+  if (status === "interview" && mulakatChannelId) {
+    await postToChannel(mulakatChannelId, {
+      content: tag,
+      embeds: [{
+        title: "📋 Mülakat Çağrısı",
+        color: 0x3b82f6,
+        description: `${tag} — Başvurunuz **mülakat** aşamasına alındı. Lütfen mülakat kanalına geçin.`,
+        footer: { text: "23rd Street Department" },
+        timestamp: new Date().toISOString(),
+      }],
+    })
+  } else if (status === "accepted" && sonucChannelId) {
+    await postToChannel(sonucChannelId, {
+      embeds: [{
+        title: "✅ Başvuru Kabul",
+        color: 0x22c55e,
+        description: `${tag} — Başvurusu **kabul** edildi.`,
+        footer: { text: "23rd Street Department" },
+        timestamp: new Date().toISOString(),
+      }],
+    })
+  } else if (status === "completed" && sonucChannelId) {
+    await postToChannel(sonucChannelId, {
+      embeds: [{
+        title: "🏁 Süreç Tamamlandı",
+        color: 0x6366f1,
+        description: `${tag} — Mülakat süreci tamamlandı.`,
+        footer: { text: "23rd Street Department" },
+        timestamp: new Date().toISOString(),
+      }],
+    })
+  } else if (status === "rejected" && sonucChannelId) {
+    await postToChannel(sonucChannelId, {
+      embeds: [{
+        title: "❌ Başvuru Reddedildi",
+        color: 0xef4444,
+        description: `${tag} — Başvurusu **reddedildi**.`,
+        fields: [
+          ...(reason ? [{ name: "Sebep", value: reason }] : []),
+          ...(rejectedBy ? [{ name: "Değerlendiren", value: rejectedBy, inline: true }] : []),
+        ],
+        footer: { text: "23rd Street Department" },
+        timestamp: new Date().toISOString(),
+      }],
+    })
+  }
 }
 
 export async function GET(req: Request) {
