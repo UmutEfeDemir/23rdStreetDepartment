@@ -6,7 +6,7 @@ import { useSession, signIn, signOut } from "next-auth/react"
 import Image from "next/image"
 import Link from "next/link"
 
-type AppStatus = "pending" | "interview" | "accepted" | "rejected"
+type AppStatus = "pending" | "interview" | "accepted" | "rejected" | "completed"
 type Tab = "applications" | "officers" | "access" | "badges" | "announcements" | "ribbon" | "gallery" | "rules" | "accounts" | "archive" | "roles"
 type AdminRole = "founder" | "moderator" | "interview"
 
@@ -86,8 +86,8 @@ const COLOR_PRESETS = [
   { label: "Kutup",               from: "#1e3a5f", to: "#67e8f9" },
 ]
 
-const STATUS_LABELS: Record<AppStatus, string> = { pending: "Beklemede", interview: "Mülakat", accepted: "Kabul", rejected: "Red" }
-const STATUS_COLORS: Record<AppStatus, string> = { pending: "var(--color-accent)", interview: "oklch(0.72 0.16 230)", accepted: "var(--color-status-on)", rejected: "var(--color-warn)" }
+const STATUS_LABELS: Record<AppStatus, string> = { pending: "Beklemede", interview: "Mülakat", accepted: "Kabul", rejected: "Red", completed: "Tamamlandı" }
+const STATUS_COLORS: Record<AppStatus, string> = { pending: "var(--color-accent)", interview: "oklch(0.72 0.16 230)", accepted: "var(--color-status-on)", rejected: "var(--color-warn)", completed: "oklch(0.65 0.18 145)" }
 const UNITS = ["High Command", "Sup. Command", "Supervisor", "Detective Supervisor", "Polis"]
 const RANKS = ["Captain", "Senior Lieutenant", "Lieutenant", "Senior Sergeant", "Sergeant", "Corporal", "Master Trooper", "Senior Trooper", "Trooper", "Cadet"]
 const STATUSES = ["Görevde", "Aktif", "İzinli", "Eğitimde"]
@@ -1029,27 +1029,52 @@ export default function AdminDashboard() {
         </div>
       </header>
 
-      {/* Tabs — filtered by role */}
-      <div style={{ background: "var(--color-bg-2)", borderBottom: "1px solid var(--color-line)", padding: "0 clamp(20px,4vw,48px)", display: "flex", gap: 4, overflowX: "auto" }}>
-        {(["applications", "officers", "access", "badges", "announcements", "ribbon", "gallery", "archive", "rules", "accounts", "roles"] as Tab[])
-          .filter((t) => {
-            if (adminRole === "interview") return t === "applications"
-            if (adminRole === "moderator") return ["applications", "access", "badges", "announcements", "ribbon", "gallery", "archive", "rules"].includes(t)
-            return true // founder sees all
-          })
-          .map((t) => (
-            <button key={t} onClick={() => { setTab(t); if (t === "archive") loadArchive() }} style={{ ...mono, fontSize: "0.62rem", padding: "14px 20px", background: "transparent", border: "none", borderBottom: tab === t ? "2px solid var(--color-accent)" : "2px solid transparent", color: tab === t ? "var(--color-accent)" : "var(--color-faint)", cursor: "pointer", whiteSpace: "nowrap", flexShrink: 0 }}>
-              {t === "applications" ? `Başvurular (${apps.length})` : t === "officers" ? `Personel (${officers.length})` : t === "access" ? `Erişim (${accessRequests.filter(r => r.status === "pending").length})` : t === "badges" ? `Rozetler (${badgeTypes.length})` : t === "announcements" ? `Duyurular (${announcements.length})` : t === "ribbon" ? `Kayan Mesajlar (${ribbonMessages.length})` : t === "gallery" ? `Galeri (${galleryImages.length})` : t === "archive" ? `Arşiv (${archivedApps.length})` : t === "rules" ? `Kurallar` : t === "accounts" ? `Hesaplar (${accounts.length})` : `Roller (${adminRoles.length})`}
-            </button>
-          ))}
-      </div>
+      {/* Tabs — grouped by category */}
+      {(() => {
+        const tabLabel = (t: Tab) => t === "applications" ? `Başvurular (${apps.length})` : t === "officers" ? `Personel (${officers.length})` : t === "access" ? `Erişim (${accessRequests.filter(r => r.status === "pending").length})` : t === "badges" ? `Rozetler (${badgeTypes.length})` : t === "announcements" ? `Duyurular (${announcements.length})` : t === "ribbon" ? `Kayan Mesajlar (${ribbonMessages.length})` : t === "gallery" ? `Galeri (${galleryImages.length})` : t === "archive" ? `Arşiv (${archivedApps.length})` : t === "rules" ? `Kurallar` : t === "accounts" ? `Hesaplar (${accounts.length})` : `Roller (${adminRoles.length})`
+        const isVisible = (t: Tab) => {
+          if (adminRole === "interview") return t === "applications"
+          if (adminRole === "moderator") return ["applications", "access", "badges", "announcements", "ribbon", "gallery", "archive", "rules"].includes(t)
+          return true
+        }
+        const groups: { label: string; tabs: Tab[] }[] = [
+          { label: "Mülakat", tabs: ["applications", "access"] },
+          { label: "Personel", tabs: ["officers"] },
+          { label: "Site Ayarları", tabs: ["announcements", "ribbon", "gallery", "badges", "rules"] },
+          { label: "Yönetim", tabs: ["accounts", "roles", "archive"] },
+        ]
+        return (
+          <div style={{ background: "var(--color-bg-2)", borderBottom: "1px solid var(--color-line)", overflowX: "auto" }}>
+            <div style={{ display: "flex", padding: "0 clamp(20px,4vw,48px)", minWidth: "max-content" }}>
+              {groups.map((group, gi) => {
+                const visible = group.tabs.filter(isVisible)
+                if (visible.length === 0) return null
+                return (
+                  <div key={group.label} style={{ display: "flex", alignItems: "stretch", borderRight: gi < groups.length - 1 ? "1px solid var(--color-line)" : "none" }}>
+                    <div style={{ display: "flex", flexDirection: "column", justifyContent: "center", padding: "0 14px 0 0", flexShrink: 0 }}>
+                      <span style={{ ...mono, fontSize: "0.42rem", color: "var(--color-faint)", letterSpacing: "0.2em", opacity: 0.6 }}>{group.label}</span>
+                    </div>
+                    <div style={{ display: "flex" }}>
+                      {visible.map((t) => (
+                        <button key={t} onClick={() => { setTab(t); if (t === "archive") loadArchive() }} style={{ ...mono, fontSize: "0.6rem", padding: "14px 16px", background: "transparent", border: "none", borderBottom: tab === t ? "2px solid var(--color-accent)" : "2px solid transparent", color: tab === t ? "var(--color-accent)" : "var(--color-faint)", cursor: "pointer", whiteSpace: "nowrap", flexShrink: 0 }}>
+                          {tabLabel(t)}
+                        </button>
+                      ))}
+                    </div>
+                  </div>
+                )
+              })}
+            </div>
+          </div>
+        )
+      })()}
 
       {/* ── Applications tab ── */}
       {tab === "applications" && (
         <div className="flex" style={{ minHeight: "calc(100vh - 108px)" }}>
           <div style={{ width: selected ? "380px" : "100%", maxWidth: selected ? 380 : "none", flexShrink: 0, borderRight: selected ? "1px solid var(--color-line)" : "none", overflowY: "auto" }}>
             <div className="flex gap-1 flex-wrap" style={{ padding: "12px 16px", borderBottom: "1px solid var(--color-line)", background: "var(--color-bg-2)" }}>
-              {(["all", "pending", "interview", "accepted", "rejected"] as const).map((f) => (
+              {(["all", "pending", "interview", "accepted", "completed", "rejected"] as const).map((f) => (
                 <button key={f} onClick={() => setFilter(f)} style={{ ...mono, fontSize: "0.58rem", padding: "5px 10px", border: "1px solid", borderColor: filter === f ? "var(--color-accent)" : "var(--color-line)", background: filter === f ? "var(--color-accent)" : "transparent", color: filter === f ? "var(--color-accent-ink)" : "var(--color-muted)", cursor: "pointer" }}>
                   {f === "all" ? `Tümü (${apps.length})` : `${STATUS_LABELS[f]} (${apps.filter(a => a.status === f).length})`}
                 </button>
@@ -1095,9 +1120,10 @@ export default function AdminDashboard() {
               <div>
                 <div style={{ ...mono, fontSize: "0.58rem", color: "var(--color-faint)", marginBottom: 10 }}>Durum Güncelle</div>
                 <div className="flex flex-wrap gap-2">
-                  {(["pending", "interview"] as AppStatus[]).map((s) => (
+                  {(["pending", "interview", "accepted"] as AppStatus[]).map((s) => (
                     <button key={s} onClick={() => updateStatus(selected.id, s)} style={{ ...mono, fontSize: "0.62rem", padding: "9px 18px", border: `1px solid ${STATUS_COLORS[s]}`, background: selected.status === s ? STATUS_COLORS[s] : "transparent", color: selected.status === s ? "#fff" : STATUS_COLORS[s], cursor: "pointer", fontWeight: selected.status === s ? 700 : 400 }}>{STATUS_LABELS[s]}</button>
                   ))}
+                  <button onClick={() => updateStatus(selected.id, "completed")} style={{ ...mono, fontSize: "0.62rem", padding: "9px 18px", border: `1px solid ${STATUS_COLORS.completed}`, background: selected.status === "completed" ? STATUS_COLORS.completed : "transparent", color: selected.status === "completed" ? "#000" : STATUS_COLORS.completed, cursor: "pointer", fontWeight: selected.status === "completed" ? 700 : 400 }}>✓ Tamamlandı</button>
                   <button onClick={() => { setRejModal(selected); setRejBy(adminDisplayName) }} style={{ ...mono, fontSize: "0.62rem", padding: "9px 18px", border: "1px solid #ef4444", background: selected.status === "rejected" ? "#ef4444" : "transparent", color: selected.status === "rejected" ? "#fff" : "#ef4444", cursor: "pointer", fontWeight: selected.status === "rejected" ? 700 : 400 }}>Red</button>
                   {adminRole !== "interview" && (
                     <button onClick={() => deleteApplication(selected.id)} style={{ ...mono, fontSize: "0.62rem", padding: "9px 18px", border: "1px solid var(--color-line)", background: "transparent", color: "var(--color-faint)", cursor: "pointer" }}>Sil</button>

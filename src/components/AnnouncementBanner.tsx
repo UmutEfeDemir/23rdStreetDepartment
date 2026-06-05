@@ -26,7 +26,7 @@ export default function AnnouncementBanner() {
         .then((d) => setAnnouncements(Array.isArray(d) ? d : []))
         .catch(() => {})
     load()
-    const t = setInterval(load, 60_000)
+    const t = setInterval(load, 10_000)
     return () => clearInterval(t)
   }, [])
 

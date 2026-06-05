@@ -49,7 +49,7 @@ export default function StatusRibbon() {
     }
 
     load()
-    const interval = setInterval(load, 30_000)
+    const interval = setInterval(load, 10_000)
     return () => clearInterval(interval)
   }, [])
 

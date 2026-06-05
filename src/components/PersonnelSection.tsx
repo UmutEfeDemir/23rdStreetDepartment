@@ -76,69 +76,81 @@ function OfficerModal({ officer, onClose }: { officer: OfficerRow; onClose: () =
     ? `${Math.floor(seniority / 12)} yıl ${seniority % 12} ay`
     : `${seniority} ay`
   const progress = Math.min(100, Math.max(0, officer.rank_progress ?? 0))
+  const dutyHours = Math.floor((officer.duty_hours ?? 0) / 3600)
+  const mono: React.CSSProperties = { fontFamily: "var(--font-mono)", letterSpacing: "0.12em", textTransform: "uppercase" as const }
 
   return (
     <div
-      style={{ position: "fixed", inset: 0, background: "oklch(0 0 0 / 0.82)", zIndex: 800, display: "flex", alignItems: "center", justifyContent: "center", padding: 24 }}
+      style={{ position: "fixed", inset: 0, background: "oklch(0 0 0 / 0.85)", zIndex: 800, display: "flex", alignItems: "center", justifyContent: "center", padding: 24 }}
       onClick={onClose}
     >
       <div
-        style={{ background: "var(--color-bg-2)", border: "1px solid var(--color-line)", width: "100%", maxWidth: 480 }}
+        style={{ background: "var(--color-bg-2)", border: "1px solid var(--color-line)", width: "100%", maxWidth: 520 }}
         onClick={(e) => e.stopPropagation()}
       >
-        {/* Header */}
-        <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", padding: "14px 20px", borderBottom: "1px solid var(--color-line)", background: "var(--color-bg-3)" }}>
-          <span style={{ fontFamily: "var(--font-mono)", fontSize: "0.58rem", letterSpacing: "0.14em", textTransform: "uppercase", color: "var(--color-accent)" }}>● Personel Kaydı</span>
-          <button onClick={onClose} style={{ fontFamily: "var(--font-mono)", fontSize: "0.55rem", letterSpacing: "0.1em", color: "var(--color-faint)", border: "1px solid var(--color-line)", padding: "4px 10px", background: "transparent", cursor: "pointer" }}>✕</button>
+        {/* Header bar */}
+        <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", padding: "12px 20px", borderBottom: "1px solid var(--color-line)", background: "var(--color-bg-3)" }}>
+          <span style={{ ...mono, fontSize: "0.55rem", color: "var(--color-accent)" }}>● Personel Kaydı</span>
+          <button onClick={onClose} style={{ ...mono, fontSize: "0.55rem", color: "var(--color-faint)", border: "1px solid var(--color-line)", padding: "4px 10px", background: "transparent", cursor: "pointer" }}>✕</button>
         </div>
 
-        <div style={{ padding: 24 }}>
-          {/* Avatar + identity */}
-          <div style={{ display: "flex", gap: 16, alignItems: "center", marginBottom: 20 }}>
-            <div style={{ position: "relative", width: 72, height: 72, flexShrink: 0 }}>
+        {/* Avatar section */}
+        <div style={{ padding: "28px 28px 0" }}>
+          <div style={{ display: "flex", gap: 20, alignItems: "flex-start" }}>
+            {/* Avatar */}
+            <div style={{ position: "relative", width: 88, height: 88, flexShrink: 0 }}>
               {officer.discord_avatar ? (
-                <Image src={officer.discord_avatar} alt={officer.name} fill className="rounded-full" style={{ objectFit: "cover", border: "2px solid #5865F2" }} />
+                <Image src={officer.discord_avatar} alt={officer.name} fill className="rounded-full" style={{ objectFit: "cover", border: "3px solid var(--color-accent)" }} />
               ) : (
-                <div className="rounded-full flex items-center justify-center" style={{ width: 72, height: 72, background: "var(--color-bg-3)", border: "2px solid var(--color-line)", fontFamily: "var(--font-mono)", fontSize: "1.1rem", color: "var(--color-accent)", fontWeight: 700 }}>
+                <div className="rounded-full flex items-center justify-center" style={{ width: 88, height: 88, background: "var(--color-bg-3)", border: "3px solid var(--color-accent)", fontFamily: "var(--font-display)", fontSize: "1.6rem", color: "var(--color-accent)", fontWeight: 700 }}>
                   {officer.name.split(" ").map((p) => p[0]).join("").slice(0, 2).toUpperCase()}
                 </div>
               )}
-              <span style={{ position: "absolute", bottom: 2, right: 2, width: 12, height: 12, borderRadius: "50%", background: statusColor(officer.status), border: "2px solid var(--color-bg-2)" }} />
+              <span style={{ position: "absolute", bottom: 4, right: 4, width: 14, height: 14, borderRadius: "50%", background: statusColor(officer.status), border: "2px solid var(--color-bg-2)" }} />
             </div>
-            <div>
-              <div style={{ fontFamily: "var(--font-display)", fontSize: "1.2rem", fontWeight: 700, textTransform: "uppercase", color: "var(--color-txt)", lineHeight: 1.1 }}>{officer.name}</div>
-              <div style={{ fontFamily: "var(--font-mono)", fontSize: "0.6rem", letterSpacing: "0.12em", color: "var(--color-accent)", marginTop: 4 }}>{officer.badge_no} · {officer.rank}</div>
-              <div style={{ fontFamily: "var(--font-mono)", fontSize: "0.55rem", letterSpacing: "0.1em", color: "var(--color-faint)", marginTop: 2 }}>{officer.unit}</div>
+            {/* Identity */}
+            <div style={{ flex: 1, minWidth: 0 }}>
+              <div style={{ fontFamily: "var(--font-display)", fontSize: "1.5rem", fontWeight: 700, textTransform: "uppercase", color: "var(--color-txt)", lineHeight: 1, marginBottom: 6 }}>{officer.name}</div>
+              <div style={{ ...mono, fontSize: "0.62rem", color: "var(--color-accent)", marginBottom: 4 }}>{officer.badge_no}</div>
+              <div style={{ ...mono, fontSize: "0.58rem", color: "var(--color-muted)" }}>{officer.rank} · {officer.unit}</div>
+              <div style={{ marginTop: 10, display: "flex", alignItems: "center", gap: 6 }}>
+                <span style={{ width: 8, height: 8, borderRadius: "50%", background: statusColor(officer.status), display: "inline-block" }} />
+                <span style={{ ...mono, fontSize: "0.55rem", color: statusColor(officer.status) }}>{officer.status}</span>
+              </div>
             </div>
           </div>
 
-          {/* Stats grid */}
-          <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 10, marginBottom: 16 }}>
-            {[
-              { label: "Durum", value: officer.status, color: statusColor(officer.status) },
-              { label: "Kıdem", value: seniorityText },
-              { label: "Devriye", value: officer.duty_hours ? `${Math.floor((officer.duty_hours ?? 0) / 3600)}s` : "—" },
-              { label: "Sonraki Rütbe", value: officer.next_rank || "—" },
-            ].map(({ label, value, color }) => (
-              <div key={label} style={{ background: "var(--color-bg-3)", border: "1px solid var(--color-line)", padding: "10px 14px" }}>
-                <div style={{ fontFamily: "var(--font-mono)", fontSize: "0.5rem", letterSpacing: "0.16em", textTransform: "uppercase", color: "var(--color-faint)", marginBottom: 4 }}>{label}</div>
-                <div style={{ fontFamily: "var(--font-mono)", fontSize: "0.72rem", fontWeight: 700, color: color ?? "var(--color-txt)" }}>{value}</div>
-              </div>
-            ))}
-          </div>
-
-          {/* Rank progress */}
-          {officer.next_rank && (
-            <div>
-              <div style={{ fontFamily: "var(--font-mono)", fontSize: "0.5rem", letterSpacing: "0.16em", textTransform: "uppercase", color: "var(--color-faint)", marginBottom: 6 }}>
-                Rütbe İlerlemesi — {progress}%
-              </div>
-              <div style={{ height: 4, background: "var(--color-bg-3)", border: "1px solid var(--color-line)", overflow: "hidden" }}>
-                <div style={{ height: "100%", width: `${progress}%`, background: "var(--color-accent)", transition: "width 0.4s ease" }} />
-              </div>
-            </div>
-          )}
+          {/* Divider */}
+          <div style={{ borderTop: "1px solid var(--color-line)", margin: "20px 0 0" }} />
         </div>
+
+        {/* Info rows */}
+        <div style={{ padding: "0 28px" }}>
+          {[
+            { label: "Kıdem", value: seniorityText },
+            { label: "Toplam Devriye", value: `${dutyHours} saat` },
+            { label: "Sonraki Rütbe", value: officer.next_rank || "—" },
+          ].map(({ label, value }) => (
+            <div key={label} style={{ display: "flex", justifyContent: "space-between", alignItems: "center", padding: "10px 0", borderBottom: "1px solid var(--color-line-soft)" }}>
+              <span style={{ ...mono, fontSize: "0.55rem", color: "var(--color-faint)" }}>{label}</span>
+              <span style={{ ...mono, fontSize: "0.62rem", color: "var(--color-txt)", fontWeight: 700 }}>{value}</span>
+            </div>
+          ))}
+        </div>
+
+        {/* Rank progress */}
+        {officer.next_rank && (
+          <div style={{ padding: "16px 28px 24px" }}>
+            <div style={{ display: "flex", justifyContent: "space-between", marginBottom: 6 }}>
+              <span style={{ ...mono, fontSize: "0.5rem", color: "var(--color-faint)" }}>Rütbe İlerlemesi</span>
+              <span style={{ ...mono, fontSize: "0.5rem", color: "var(--color-accent)" }}>{progress}%</span>
+            </div>
+            <div style={{ height: 4, background: "var(--color-bg-3)", border: "1px solid var(--color-line)", overflow: "hidden" }}>
+              <div style={{ height: "100%", width: `${progress}%`, background: "var(--color-accent)", transition: "width 0.4s ease" }} />
+            </div>
+          </div>
+        )}
+        {!officer.next_rank && <div style={{ height: 24 }} />}
       </div>
     </div>
   )

@@ -86,6 +86,21 @@ function formatDuration(seconds: number) {
   return `${String(h).padStart(2, "0")}:${String(m).padStart(2, "0")}:${String(s).padStart(2, "0")}`
 }
 
+function TotalDutyBox({ dutyHours, activeDutyClockIn }: { dutyHours: number; activeDutyClockIn?: string | null }) {
+  const [total, setTotal] = useState(dutyHours)
+  useEffect(() => {
+    if (!activeDutyClockIn) { setTotal(dutyHours); return }
+    const update = () => {
+      const active = Math.floor((Date.now() - new Date(activeDutyClockIn).getTime()) / 1000)
+      setTotal(dutyHours + active)
+    }
+    update()
+    const t = setInterval(update, 1000)
+    return () => clearInterval(t)
+  }, [dutyHours, activeDutyClockIn])
+  return <StatBox label="Toplam Devriye" value={formatDutyTime(total)} />
+}
+
 function ElapsedTimer({ clockIn }: { clockIn: string }) {
   const [elapsed, setElapsed] = useState("")
   useEffect(() => {
@@ -327,7 +342,7 @@ export default function PersonnelPanel() {
                 const validLogs = logs.filter(l => l.duration_minutes != null && l.duration_minutes >= 1800)
                 return (
                   <div className="grid grid-cols-3 gap-3">
-                    <StatBox label="TOPLAM DEVRIYE" value={formatDutyTime(officer.duty_hours)} />
+                    <TotalDutyBox dutyHours={officer.duty_hours} activeDutyClockIn={activeDuty?.clock_in} />
                     <StatBox label="TAMAMLANAN DEVRİYE" value={validLogs.length} />
                     <StatBox label="SON GÖREV" value={validLogs.length > 0 ? new Date(validLogs[0].clock_in).toLocaleDateString("tr-TR") : "—"} />
                   </div>
