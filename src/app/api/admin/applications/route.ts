@@ -40,6 +40,25 @@ async function updateNickname(userId: string, nick: string) {
   else console.log(`[Discord] ✅ Nickname güncellendi: ${userId} → ${nick}`)
 }
 
+async function sendDM(userId: string, content: string) {
+  const token = getBotToken()
+  if (!token || !userId) return
+  try {
+    const dmRes = await fetch(`https://discord.com/api/v10/users/@me/channels`, {
+      method: "POST",
+      headers: { Authorization: `Bot ${token}`, "Content-Type": "application/json" },
+      body: JSON.stringify({ recipient_id: userId }),
+    })
+    if (!dmRes.ok) return
+    const dm = await dmRes.json() as { id: string }
+    await fetch(`https://discord.com/api/v10/channels/${dm.id}/messages`, {
+      method: "POST",
+      headers: { Authorization: `Bot ${token}`, "Content-Type": "application/json" },
+      body: JSON.stringify({ content }),
+    })
+  } catch { /* DM engellenmiş olabilir */ }
+}
+
 async function postToChannel(channelId: string, payload: Record<string, unknown>) {
   const token = process.env.DISCORD_MESAI_BOT_TOKEN || process.env.DISCORD_BOT_TOKEN
   if (!token) { console.warn("[Discord] Bot token eksik"); return }
@@ -77,11 +96,9 @@ async function sendDiscordNotification(
   const tag = discordId ? `<@${discordId}>` : "Başvuru Sahibi"
 
   if (status === "interview") {
-    // Mülakat rolü ver
-    if (discordId && mulakatRoleId) await giveRole(discordId, mulakatRoleId)
-    // Kanala bildirim
-    if (mulakatChannelId) {
-      await postToChannel(mulakatChannelId, {
+    await Promise.all([
+      discordId && mulakatRoleId ? giveRole(discordId, mulakatRoleId) : Promise.resolve(),
+      mulakatChannelId ? postToChannel(mulakatChannelId, {
         content: tag,
         embeds: [{
           title: "📋 Mülakat Çağrısı",
@@ -90,19 +107,17 @@ async function sendDiscordNotification(
           footer: { text: "23rd Street Department" },
           timestamp: new Date().toISOString(),
         }],
-      })
-    }
+      }) : Promise.resolve(),
+    ])
   } else if (status === "accepted") {
-    // Mülakat rolü kaldır, görevli + cadet ver
-    if (discordId) {
-      if (mulakatRoleId) await removeRole(discordId, mulakatRoleId)
-      if (sivilRoleId) await removeRole(discordId, sivilRoleId)
-      if (gorevliRoleId) await giveRole(discordId, gorevliRoleId)
-      if (cadetRoleId) await giveRole(discordId, cadetRoleId)
-      if (characterName) await updateNickname(discordId, `[S-23---] ${characterName}`)
-    }
-    if (sonucChannelId) {
-      await postToChannel(sonucChannelId, {
+    await Promise.all([
+      discordId && mulakatRoleId ? removeRole(discordId, mulakatRoleId) : Promise.resolve(),
+      discordId && sivilRoleId ? removeRole(discordId, sivilRoleId) : Promise.resolve(),
+      discordId && gorevliRoleId ? giveRole(discordId, gorevliRoleId) : Promise.resolve(),
+      discordId && cadetRoleId ? giveRole(discordId, cadetRoleId) : Promise.resolve(),
+      discordId && characterName ? updateNickname(discordId, `[S-23---] ${characterName}`) : Promise.resolve(),
+      discordId ? sendDM(discordId, `✅ **23rd Street Department'a hoş geldiniz!**\n\nBaşvurunuz kabul edildi. Discord sunucu isminiz **[S-23---] ${characterName ?? ""}** olarak güncellendi.\n\n📌 Lütfen rozet numaranız atandıktan sonra isminizi \`[S-XXXXX] ${characterName ?? ""}\` formatında güncelleyin.`) : Promise.resolve(),
+      sonucChannelId ? postToChannel(sonucChannelId, {
         embeds: [{
           title: "✅ Başvuru Kabul",
           color: 0x22c55e,
@@ -110,8 +125,8 @@ async function sendDiscordNotification(
           footer: { text: "23rd Street Department" },
           timestamp: new Date().toISOString(),
         }],
-      })
-    }
+      }) : Promise.resolve(),
+    ])
   } else if (status === "completed") {
     if (sonucChannelId) {
       await postToChannel(sonucChannelId, {
@@ -125,10 +140,9 @@ async function sendDiscordNotification(
       })
     }
   } else if (status === "rejected") {
-    // Mülakat rolü kaldır
-    if (discordId && mulakatRoleId) await removeRole(discordId, mulakatRoleId)
-    if (sonucChannelId) {
-      await postToChannel(sonucChannelId, {
+    await Promise.all([
+      discordId && mulakatRoleId ? removeRole(discordId, mulakatRoleId) : Promise.resolve(),
+      sonucChannelId ? postToChannel(sonucChannelId, {
         embeds: [{
           title: "❌ Başvuru Reddedildi",
           color: 0xef4444,
@@ -140,8 +154,8 @@ async function sendDiscordNotification(
           footer: { text: "23rd Street Department" },
           timestamp: new Date().toISOString(),
         }],
-      })
-    }
+      }) : Promise.resolve(),
+    ])
   }
 }
 

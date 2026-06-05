@@ -16,6 +16,28 @@ export async function POST(req: NextRequest) {
       try {
         const { getDb } = await import("@/lib/db")
         const sql = getDb()
+
+        // Aynı karakter adıyla aktif başvuru var mı?
+        const dupName = await sql`
+          SELECT id FROM applications
+          WHERE LOWER(character_name) = LOWER(${characterName}) AND deleted_at IS NULL LIMIT 1
+        `
+        if (dupName.length > 0) {
+          return Response.json({ error: "Bu karakter adıyla zaten bir başvuru mevcut." }, { status: 409 })
+        }
+
+        // Aynı Discord ID ile aktif başvuru var mı?
+        if (discordId) {
+          const dupDc = await sql`
+            SELECT id FROM applications
+            WHERE discord_id = ${discordId} AND deleted_at IS NULL
+            AND status NOT IN ('rejected','completed') LIMIT 1
+          `
+          if (dupDc.length > 0) {
+            return Response.json({ error: "Bu Discord hesabıyla zaten aktif bir başvurunuz bulunuyor." }, { status: 409 })
+          }
+        }
+
         await sql`
           INSERT INTO applications
             (full_name, age, discord, discord_id, character_name, unit, experience, motivation, accepted_rules, status)
@@ -23,7 +45,9 @@ export async function POST(req: NextRequest) {
             (${fullName}, ${Number(age)}, ${discord}, ${discordId || ""}, ${characterName}, ${String(characterAge)},
              ${experience}, ${motivation}, true, 'pending')
         `
-      } catch (e) {
+      } catch (e: unknown) {
+        const err = e as { status?: number; message?: string }
+        if (err.status === 409) throw e
         console.error("DB insert error:", e)
       }
     }
