@@ -114,7 +114,9 @@ export async function PATCH(req: NextRequest) {
       if (["interview", "accepted", "rejected", "completed"].includes(status)) {
         const rows = await sql`SELECT discord_id FROM applications WHERE id = ${id} LIMIT 1`
         const discordId = (rows[0] as { discord_id?: string } | undefined)?.discord_id ?? ""
-        await sendDiscordNotification(discordId, status, rejection_reason, rejected_by)
+        sendDiscordNotification(discordId, status, rejection_reason, rejected_by).catch((e) =>
+          console.error("Discord bildirim hatası:", e)
+        )
       }
 
       return Response.json({ success: true })
