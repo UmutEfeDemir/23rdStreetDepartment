@@ -2,13 +2,24 @@ import { type NextRequest } from "next/server"
 import { isAnyAdmin, isAtLeastModerator } from "@/lib/adminAuth"
 
 async function postToChannel(channelId: string, payload: Record<string, unknown>) {
-  const token = process.env.DISCORD_BOT_TOKEN
-  if (!token || !channelId) return
-  await fetch(`https://discord.com/api/v10/channels/${channelId}/messages`, {
-    method: "POST",
-    headers: { Authorization: `Bot ${token}`, "Content-Type": "application/json" },
-    body: JSON.stringify(payload),
-  }).catch((e) => console.error("Discord channel post error:", e))
+  const token = process.env.DISCORD_MESAI_BOT_TOKEN || process.env.DISCORD_BOT_TOKEN
+  if (!token) { console.warn("[Discord] Bot token eksik"); return }
+  if (!channelId) { console.warn("[Discord] Channel ID eksik"); return }
+  try {
+    const res = await fetch(`https://discord.com/api/v10/channels/${channelId}/messages`, {
+      method: "POST",
+      headers: { Authorization: `Bot ${token}`, "Content-Type": "application/json" },
+      body: JSON.stringify(payload),
+    })
+    const data = await res.json().catch(() => ({}))
+    if (!res.ok) {
+      console.error(`[Discord] Kanal ${channelId} mesaj hatası ${res.status}:`, data)
+    } else {
+      console.log(`[Discord] ✅ Kanal ${channelId} mesaj gönderildi`)
+    }
+  } catch (e) {
+    console.error("[Discord] Fetch hatası:", e)
+  }
 }
 
 async function sendDiscordNotification(discordId: string, status: string, reason?: string, rejectedBy?: string) {
