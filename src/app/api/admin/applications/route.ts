@@ -71,6 +71,7 @@ async function sendDiscordNotification(
   const mulakatChannelId = process.env.DISCORD_MULAKAT_CHANNEL_ID
   const sonucChannelId = process.env.DISCORD_SONUC_CHANNEL_ID
   const mulakatRoleId = process.env.DISCORD_MULAKAT_ROLE_ID
+  const sivilRoleId = process.env.DISCORD_SIVIL_ROLE_ID
   const gorevliRoleId = process.env.DISCORD_GOREVLI_ROLE_ID
   const cadetRoleId = process.env.DISCORD_CADET_ROLE_ID
   const tag = discordId ? `<@${discordId}>` : "Başvuru Sahibi"
@@ -95,6 +96,7 @@ async function sendDiscordNotification(
     // Mülakat rolü kaldır, görevli + cadet ver
     if (discordId) {
       if (mulakatRoleId) await removeRole(discordId, mulakatRoleId)
+      if (sivilRoleId) await removeRole(discordId, sivilRoleId)
       if (gorevliRoleId) await giveRole(discordId, gorevliRoleId)
       if (cadetRoleId) await giveRole(discordId, cadetRoleId)
       if (characterName) await updateNickname(discordId, `[S-23---] ${characterName}`)
