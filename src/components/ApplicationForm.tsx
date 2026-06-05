@@ -46,6 +46,7 @@ export default function ApplicationForm() {
     handleSubmit,
     trigger,
     formState: { errors },
+    watch,
   // eslint-disable-next-line @typescript-eslint/no-explicit-any
   } = useForm<FormData, any, FormData>({
     resolver: zodResolver(schema) as any,
@@ -441,7 +442,7 @@ export default function ApplicationForm() {
                   ) : (
                     <button
                       type="submit"
-                      disabled={loading}
+                      disabled={loading || !watch("acceptedRules")}
                       className="btn-clip"
                       style={{
                         fontFamily: "var(--font-mono)",
@@ -449,12 +450,13 @@ export default function ApplicationForm() {
                         letterSpacing: "0.16em",
                         textTransform: "uppercase",
                         padding: "12px 28px",
-                        background: loading ? "var(--color-bg-3)" : "var(--color-accent)",
-                        color: loading ? "var(--color-faint)" : "var(--color-accent-ink)",
+                        background: loading || !watch("acceptedRules") ? "var(--color-bg-3)" : "var(--color-accent)",
+                        color: loading || !watch("acceptedRules") ? "var(--color-faint)" : "var(--color-accent-ink)",
                         border: "none",
-                        cursor: loading ? "not-allowed" : "pointer",
+                        cursor: loading || !watch("acceptedRules") ? "not-allowed" : "pointer",
                         fontWeight: 700,
                         transition: "all 0.2s",
+                        opacity: !watch("acceptedRules") ? 0.5 : 1,
                       }}
                     >
                       {loading ? "Gönderiliyor…" : "Başvuruyu Gönder"}
