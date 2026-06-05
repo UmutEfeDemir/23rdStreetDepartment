@@ -97,7 +97,7 @@ async function sendDiscordNotification(
       if (mulakatRoleId) await removeRole(discordId, mulakatRoleId)
       if (gorevliRoleId) await giveRole(discordId, gorevliRoleId)
       if (cadetRoleId) await giveRole(discordId, cadetRoleId)
-      if (characterName) await updateNickname(discordId, characterName)
+      if (characterName) await updateNickname(discordId, `[S-23---] ${characterName}`)
     }
     if (sonucChannelId) {
       await postToChannel(sonucChannelId, {

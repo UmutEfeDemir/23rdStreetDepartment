@@ -109,7 +109,10 @@ export default function ApplicationForm() {
       }
       setSubmitted(true)
     } catch (e: unknown) {
-      setError(e instanceof Error ? e.message : "Bir hata oluştu")
+      const msg = e instanceof Error ? e.message : "Bir hata oluştu"
+      setError(msg.includes("fetch") || msg.includes("network") || msg.includes("disconnected")
+        ? "İnternet bağlantısı kesildi. Bağlantınızı kontrol edip tekrar deneyin."
+        : msg)
     } finally {
       setLoading(false)
     }

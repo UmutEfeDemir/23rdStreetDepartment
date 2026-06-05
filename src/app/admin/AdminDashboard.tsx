@@ -427,9 +427,12 @@ export default function AdminDashboard() {
   }, [])
 
   const updateStatus = async (id: string, status: AppStatus) => {
-    await fetch("/api/admin/applications", { method: "PATCH", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ id, status }) })
-    setApps((p) => p.map((a) => a.id === id ? { ...a, status } : a))
-    if (selected?.id === id) setSelected((s) => s ? { ...s, status } : s)
+    try {
+      const res = await fetch("/api/admin/applications", { method: "PATCH", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ id, status }) })
+      if (!res.ok) return
+      setApps((p) => p.map((a) => a.id === id ? { ...a, status } : a))
+      if (selected?.id === id) setSelected((s) => s ? { ...s, status } : s)
+    } catch { alert("Bağlantı hatası. İnternet bağlantınızı kontrol edin.") }
   }
 
   const confirmReject = async () => {
