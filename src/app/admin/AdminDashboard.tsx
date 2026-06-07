@@ -368,7 +368,16 @@ export default function AdminDashboard() {
   const [newRolePerms, setNewRolePerms] = useState<Record<string, boolean>>({ announce: false, images: false, forum: false, accounts: false })
   const [roleSaving, setRoleSaving] = useState(false)
 
+  const [isMobile, setIsMobile] = useState(false)
+
   const router = useRouter()
+
+  useEffect(() => {
+    const check = () => setIsMobile(window.innerWidth < 768)
+    check()
+    window.addEventListener("resize", check)
+    return () => window.removeEventListener("resize", check)
+  }, [])
 
   useEffect(() => {
     fetch("/api/admin/me")
@@ -898,8 +907,8 @@ export default function AdminDashboard() {
 
       {/* Edit Modal */}
       {editTarget && (
-        <div style={{ position: "fixed", inset: 0, background: "oklch(0 0 0 / 0.75)", zIndex: 200, display: "flex", alignItems: "center", justifyContent: "center", padding: 24 }}>
-          <div style={{ background: "var(--color-bg-2)", border: "1px solid var(--color-line)", padding: 32, width: "100%", maxWidth: 720, maxHeight: "90vh", overflowY: "auto" }}>
+        <div style={{ position: "fixed", inset: 0, background: "oklch(0 0 0 / 0.75)", zIndex: 200, display: "flex", alignItems: "center", justifyContent: "center", padding: 12 }}>
+          <div style={{ background: "var(--color-bg-2)", border: "1px solid var(--color-line)", padding: "clamp(16px, 3vw, 32px)", width: "100%", maxWidth: 720, maxHeight: "92vh", overflowY: "auto" }}>
             <div className="flex justify-between items-center mb-6">
               <span style={{ ...mono, fontSize: "0.65rem", color: "var(--color-accent)" }}>Memur Düzenle — {editTarget.name}</span>
               <button onClick={() => setEditTarget(null)} style={{ ...mono, fontSize: "0.6rem", color: "var(--color-faint)", border: "1px solid var(--color-line)", padding: "5px 12px", background: "transparent", cursor: "pointer" }}>✕ Kapat</button>
@@ -964,23 +973,28 @@ export default function AdminDashboard() {
       )}
 
       {/* Header */}
-      <header style={{ background: "var(--color-bg-2)", borderBottom: "1px solid var(--color-line)", padding: "0 clamp(20px,4vw,48px)", height: 64, display: "flex", alignItems: "center", justifyContent: "space-between", position: "sticky", top: 0, zIndex: 50 }}>
-        <div className="flex items-center gap-4">
-          <Link href="/" style={{ ...mono, fontSize: "0.58rem", color: "var(--color-faint)", border: "1px solid var(--color-line)", padding: "5px 12px", background: "transparent", textDecoration: "none", display: "flex", alignItems: "center", gap: 6 }}>
-            ← Ana Sayfa
+      <header style={{ background: "var(--color-bg-2)", borderBottom: "1px solid var(--color-line)", padding: "0 clamp(12px,4vw,48px)", height: 56, display: "flex", alignItems: "center", justifyContent: "space-between", position: "sticky", top: 0, zIndex: 50, gap: 8 }}>
+        <div className="flex items-center gap-2" style={{ minWidth: 0, flex: 1 }}>
+          <Link href="/" style={{ ...mono, fontSize: "0.58rem", color: "var(--color-faint)", border: "1px solid var(--color-line)", padding: "5px 8px", background: "transparent", textDecoration: "none", display: "flex", alignItems: "center", gap: 4, flexShrink: 0 }}>
+            ←{!isMobile && " Ana Sayfa"}
           </Link>
-          <div className="flex items-center gap-3">
-            <Image src="/logo.png" alt="Logo" width={36} height={36} className="rounded-full" />
-            <div>
-              <span style={{ fontFamily: "var(--font-display)", fontSize: "0.9rem", fontWeight: 700, textTransform: "uppercase", letterSpacing: "0.06em", color: "var(--color-txt)" }}>Admin Paneli</span>
-              <span style={{ ...mono, fontSize: "0.55rem", color: "var(--color-accent)", marginLeft: 10 }}>23rd Street Dept.</span>
-            </div>
+          <div className="flex items-center gap-2" style={{ minWidth: 0 }}>
+            <Image src="/logo.png" alt="Logo" width={30} height={30} className="rounded-full" style={{ flexShrink: 0 }} />
+            {!isMobile && (
+              <div>
+                <span style={{ fontFamily: "var(--font-display)", fontSize: "0.85rem", fontWeight: 700, textTransform: "uppercase", letterSpacing: "0.06em", color: "var(--color-txt)" }}>Admin Paneli</span>
+                <span style={{ ...mono, fontSize: "0.52rem", color: "var(--color-accent)", marginLeft: 8 }}>23rd Street</span>
+              </div>
+            )}
+            {isMobile && (
+              <span style={{ fontFamily: "var(--font-display)", fontSize: "0.75rem", fontWeight: 700, textTransform: "uppercase", color: "var(--color-txt)" }}>Admin</span>
+            )}
           </div>
         </div>
 
         {/* Discord profile + role + logout */}
-        <div className="flex items-center gap-4">
-          {adminRole && (() => {
+        <div className="flex items-center" style={{ gap: isMobile ? 6 : 12, flexShrink: 0 }}>
+          {!isMobile && adminRole && (() => {
             const label = adminRole === "founder"
               ? "● Developer"
               : adminCustomRoleName
@@ -1008,25 +1022,27 @@ export default function AdminDashboard() {
             )
           })()}
           {session?.user ? (
-            <div className="flex items-center gap-3">
+            <div className="flex items-center" style={{ gap: isMobile ? 6 : 10 }}>
               {session.user.image ? (
                 // eslint-disable-next-line @next/next/no-img-element
-                <img src={session.user.image} alt="Profil" className="rounded-full" style={{ width: 34, height: 34, border: "2px solid var(--color-accent)" }} />
+                <img src={session.user.image} alt="Profil" className="rounded-full" style={{ width: 30, height: 30, border: "2px solid var(--color-accent)", flexShrink: 0 }} />
               ) : (
-                <div className="rounded-full flex items-center justify-center" style={{ width: 34, height: 34, background: "var(--color-bg-3)", border: "2px solid var(--color-accent)", ...mono, fontSize: "0.7rem", color: "var(--color-accent)" }}>
+                <div className="rounded-full flex items-center justify-center" style={{ width: 30, height: 30, background: "var(--color-bg-3)", border: "2px solid var(--color-accent)", ...mono, fontSize: "0.7rem", color: "var(--color-accent)", flexShrink: 0 }}>
                   {session.user.name?.[0]?.toUpperCase()}
                 </div>
               )}
-              <div>
-                <div style={{ ...mono, fontSize: "0.6rem", color: "var(--color-txt)" }}>{session.user.name}</div>
-                <div style={{ ...mono, fontSize: "0.5rem", color: "var(--color-faint)" }}>Discord ile giriş yapıldı</div>
-              </div>
-              <button onClick={() => signOut()} style={{ ...mono, fontSize: "0.58rem", color: "var(--color-faint)", border: "1px solid var(--color-line)", padding: "5px 12px", background: "transparent", cursor: "pointer" }}>Çıkış</button>
+              {!isMobile && (
+                <div>
+                  <div style={{ ...mono, fontSize: "0.6rem", color: "var(--color-txt)" }}>{session.user.name}</div>
+                  <div style={{ ...mono, fontSize: "0.5rem", color: "var(--color-faint)" }}>Discord</div>
+                </div>
+              )}
+              <button onClick={() => signOut()} style={{ ...mono, fontSize: "0.55rem", color: "var(--color-faint)", border: "1px solid var(--color-line)", padding: "5px 8px", background: "transparent", cursor: "pointer" }}>Çıkış</button>
             </div>
           ) : (
-            <div className="flex items-center gap-3">
-              <button onClick={() => signIn("discord")} style={{ ...mono, fontSize: "0.6rem", color: "#5865F2", border: "1px solid #5865F2", padding: "6px 14px", background: "transparent", cursor: "pointer" }}>Discord Bağla</button>
-              <button onClick={logout} style={{ ...mono, fontSize: "0.62rem", color: "var(--color-faint)", border: "1px solid var(--color-line)", padding: "6px 14px", background: "transparent", cursor: "pointer" }}>Çıkış</button>
+            <div className="flex items-center" style={{ gap: 6 }}>
+              <button onClick={() => signIn("discord")} style={{ ...mono, fontSize: "0.55rem", color: "#5865F2", border: "1px solid #5865F2", padding: "5px 10px", background: "transparent", cursor: "pointer" }}>{isMobile ? "DC" : "Discord Bağla"}</button>
+              <button onClick={logout} style={{ ...mono, fontSize: "0.55rem", color: "var(--color-faint)", border: "1px solid var(--color-line)", padding: "5px 8px", background: "transparent", cursor: "pointer" }}>Çıkış</button>
             </div>
           )}
         </div>
@@ -1075,61 +1091,64 @@ export default function AdminDashboard() {
       {/* ── Applications tab ── */}
       {tab === "applications" && (
         <div className="flex" style={{ minHeight: "calc(100vh - 108px)" }}>
-          <div style={{ width: selected ? "380px" : "100%", maxWidth: selected ? 380 : "none", flexShrink: 0, borderRight: selected ? "1px solid var(--color-line)" : "none", overflowY: "auto" }}>
-            <div className="flex gap-1 flex-wrap" style={{ padding: "12px 16px", borderBottom: "1px solid var(--color-line)", background: "var(--color-bg-2)" }}>
-              {(["all", "pending", "interview", "accepted", "completed", "rejected"] as const).map((f) => (
-                <button key={f} onClick={() => setFilter(f)} style={{ ...mono, fontSize: "0.58rem", padding: "5px 10px", border: "1px solid", borderColor: filter === f ? "var(--color-accent)" : "var(--color-line)", background: filter === f ? "var(--color-accent)" : "transparent", color: filter === f ? "var(--color-accent-ink)" : "var(--color-muted)", cursor: "pointer" }}>
-                  {f === "all" ? `Tümü (${apps.length})` : `${STATUS_LABELS[f]} (${apps.filter(a => a.status === f).length})`}
-                </button>
+          {/* List — hidden on mobile when detail is open */}
+          {(!isMobile || !selected) && (
+            <div style={{ width: selected && !isMobile ? "360px" : "100%", maxWidth: selected && !isMobile ? 360 : "none", flexShrink: 0, borderRight: selected && !isMobile ? "1px solid var(--color-line)" : "none", overflowY: "auto" }}>
+              <div className="flex gap-1 flex-wrap" style={{ padding: "10px 12px", borderBottom: "1px solid var(--color-line)", background: "var(--color-bg-2)" }}>
+                {(["all", "pending", "interview", "accepted", "completed", "rejected"] as const).map((f) => (
+                  <button key={f} onClick={() => setFilter(f)} style={{ ...mono, fontSize: "0.55rem", padding: "4px 8px", border: "1px solid", borderColor: filter === f ? "var(--color-accent)" : "var(--color-line)", background: filter === f ? "var(--color-accent)" : "transparent", color: filter === f ? "var(--color-accent-ink)" : "var(--color-muted)", cursor: "pointer" }}>
+                    {f === "all" ? `Tümü (${apps.length})` : `${STATUS_LABELS[f]} (${apps.filter(a => a.status === f).length})`}
+                  </button>
+                ))}
+              </div>
+              {appsLoading ? (
+                <div className="p-8 text-center" style={{ ...mono, fontSize: "0.65rem", color: "var(--color-faint)" }}>YÜKLENİYOR…</div>
+              ) : filtered.length === 0 ? (
+                <div className="p-8 text-center" style={{ ...mono, fontSize: "0.65rem", color: "var(--color-faint)" }}>Başvuru bulunamadı</div>
+              ) : filtered.map((app) => (
+                <div key={app.id} onClick={() => setSelected(selected?.id === app.id && !isMobile ? null : app)} className="cursor-pointer" style={{ padding: "12px 14px", borderBottom: "1px solid var(--color-line-soft)", background: selected?.id === app.id ? "var(--color-bg-3)" : "transparent" }}>
+                  <div className="flex items-center justify-between gap-2">
+                    <div style={{ minWidth: 0 }}>
+                      <div style={{ fontFamily: "var(--font-body)", fontSize: "0.9rem", fontWeight: 600, color: "var(--color-txt)", overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>{app.full_name}</div>
+                      <div style={{ ...mono, fontSize: "0.55rem", color: "var(--color-faint)", marginTop: 2, overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>{app.discord} · {app.age} yaş</div>
+                    </div>
+                    <span style={{ ...mono, fontSize: "0.52rem", color: STATUS_COLORS[app.status], border: `1px solid ${STATUS_COLORS[app.status]}`, padding: "3px 6px", whiteSpace: "nowrap", flexShrink: 0 }}>{STATUS_LABELS[app.status]}</span>
+                  </div>
+                  <div style={{ ...mono, fontSize: "0.52rem", color: "var(--color-faint)", marginTop: 3 }}>{new Date(app.created_at).toLocaleString("tr-TR")}</div>
+                </div>
               ))}
             </div>
-            {appsLoading ? (
-              <div className="p-8 text-center" style={{ ...mono, fontSize: "0.65rem", color: "var(--color-faint)" }}>YÜKLENİYOR…</div>
-            ) : filtered.length === 0 ? (
-              <div className="p-8 text-center" style={{ ...mono, fontSize: "0.65rem", color: "var(--color-faint)" }}>Başvuru bulunamadı</div>
-            ) : filtered.map((app) => (
-              <div key={app.id} onClick={() => setSelected(selected?.id === app.id ? null : app)} className="cursor-pointer" style={{ padding: "14px 16px", borderBottom: "1px solid var(--color-line-soft)", background: selected?.id === app.id ? "var(--color-bg-3)" : "transparent" }}>
-                <div className="flex items-center justify-between gap-3">
-                  <div>
-                    <div style={{ fontFamily: "var(--font-body)", fontSize: "0.9rem", fontWeight: 600, color: "var(--color-txt)" }}>{app.full_name}</div>
-                    <div style={{ ...mono, fontSize: "0.58rem", color: "var(--color-faint)", marginTop: 2 }}>{app.discord} · Karakter {app.unit} yaş · {app.age} yaş</div>
-                  </div>
-                  <span style={{ ...mono, fontSize: "0.55rem", color: STATUS_COLORS[app.status], border: `1px solid ${STATUS_COLORS[app.status]}`, padding: "3px 8px", whiteSpace: "nowrap" }}>{STATUS_LABELS[app.status]}</span>
-                </div>
-                <div style={{ ...mono, fontSize: "0.55rem", color: "var(--color-faint)", marginTop: 4 }}>{new Date(app.created_at).toLocaleString("tr-TR")}</div>
-              </div>
-            ))}
-          </div>
+          )}
 
           {selected && (
-            <div style={{ flex: 1, overflowY: "auto", padding: "24px 28px" }}>
-              <button onClick={() => setSelected(null)} style={{ ...mono, fontSize: "0.6rem", color: "var(--color-faint)", border: "1px solid var(--color-line)", padding: "6px 12px", background: "transparent", cursor: "pointer", marginBottom: 20 }}>← Kapat</button>
-              <div style={{ fontFamily: "var(--font-display)", fontSize: "1.4rem", fontWeight: 700, textTransform: "uppercase", color: "var(--color-txt)", marginBottom: 4 }}>{selected.full_name}</div>
-              <div style={{ ...mono, fontSize: "0.62rem", color: "var(--color-accent)", marginBottom: 20 }}>{selected.character_name} · Karakter Yaşı: {selected.unit} · {selected.age} yaş</div>
-              <div className="grid grid-cols-2 gap-3 mb-6">
+            <div style={{ flex: 1, overflowY: "auto", padding: isMobile ? "14px" : "24px 28px", minWidth: 0 }}>
+              <button onClick={() => setSelected(null)} style={{ ...mono, fontSize: "0.6rem", color: "var(--color-faint)", border: "1px solid var(--color-line)", padding: "6px 12px", background: "transparent", cursor: "pointer", marginBottom: 16 }}>← {isMobile ? "Listeye Dön" : "Kapat"}</button>
+              <div style={{ fontFamily: "var(--font-display)", fontSize: isMobile ? "1.15rem" : "1.4rem", fontWeight: 700, textTransform: "uppercase", color: "var(--color-txt)", marginBottom: 4 }}>{selected.full_name}</div>
+              <div style={{ ...mono, fontSize: "0.6rem", color: "var(--color-accent)", marginBottom: 16 }}>{selected.character_name} · Karakter Yaşı: {selected.unit} · {selected.age} yaş</div>
+              <div className="grid grid-cols-2 gap-2 mb-5">
                 {[{ label: "Discord", value: selected.discord }, { label: "Discord ID", value: selected.discord_id || "—" }, { label: "Karakter Yaşı", value: selected.unit }, { label: "Oyuncu Yaşı", value: String(selected.age) }, { label: "Başvuru Tarihi", value: new Date(selected.created_at).toLocaleDateString("tr-TR") }].map((item) => (
-                  <div key={item.label} style={{ background: "var(--color-bg-2)", border: "1px solid var(--color-line)", padding: "10px 14px" }}>
-                    <div style={{ ...mono, fontSize: "0.55rem", color: "var(--color-faint)", marginBottom: 4 }}>{item.label}</div>
-                    <div style={{ fontFamily: "var(--font-body)", fontSize: "0.9rem", color: "var(--color-txt)" }}>{item.value}</div>
+                  <div key={item.label} style={{ background: "var(--color-bg-2)", border: "1px solid var(--color-line)", padding: "8px 12px", overflow: "hidden" }}>
+                    <div style={{ ...mono, fontSize: "0.52rem", color: "var(--color-faint)", marginBottom: 3 }}>{item.label}</div>
+                    <div style={{ fontFamily: "var(--font-body)", fontSize: "0.85rem", color: "var(--color-txt)", overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>{item.value}</div>
                   </div>
                 ))}
               </div>
               {[{ label: "RP Tecrübesi", value: selected.experience }, { label: "Motivasyon", value: selected.motivation }].map((s) => (
-                <div key={s.label} style={{ marginBottom: 16 }}>
-                  <div style={{ ...mono, fontSize: "0.58rem", color: "var(--color-faint)", marginBottom: 8 }}>{s.label}</div>
-                  <div style={{ fontFamily: "var(--font-body)", fontSize: "0.9rem", color: "var(--color-muted)", lineHeight: 1.7, background: "var(--color-bg-2)", border: "1px solid var(--color-line)", padding: 14 }}>{s.value}</div>
+                <div key={s.label} style={{ marginBottom: 14 }}>
+                  <div style={{ ...mono, fontSize: "0.58rem", color: "var(--color-faint)", marginBottom: 6 }}>{s.label}</div>
+                  <div style={{ fontFamily: "var(--font-body)", fontSize: "0.88rem", color: "var(--color-muted)", lineHeight: 1.7, background: "var(--color-bg-2)", border: "1px solid var(--color-line)", padding: 12, wordBreak: "break-word" }}>{s.value}</div>
                 </div>
               ))}
               <div>
                 <div style={{ ...mono, fontSize: "0.58rem", color: "var(--color-faint)", marginBottom: 10 }}>Durum Güncelle</div>
                 <div className="flex flex-wrap gap-2">
                   {(["pending", "interview", "accepted"] as AppStatus[]).map((s) => (
-                    <button key={s} onClick={() => updateStatus(selected.id, s)} style={{ ...mono, fontSize: "0.62rem", padding: "9px 18px", border: `1px solid ${STATUS_COLORS[s]}`, background: selected.status === s ? STATUS_COLORS[s] : "transparent", color: selected.status === s ? "#fff" : STATUS_COLORS[s], cursor: "pointer", fontWeight: selected.status === s ? 700 : 400 }}>{STATUS_LABELS[s]}</button>
+                    <button key={s} onClick={() => updateStatus(selected.id, s)} style={{ ...mono, fontSize: "0.6rem", padding: "8px 14px", border: `1px solid ${STATUS_COLORS[s]}`, background: selected.status === s ? STATUS_COLORS[s] : "transparent", color: selected.status === s ? "#fff" : STATUS_COLORS[s], cursor: "pointer", fontWeight: selected.status === s ? 700 : 400 }}>{STATUS_LABELS[s]}</button>
                   ))}
-                  <button onClick={() => updateStatus(selected.id, "completed")} style={{ ...mono, fontSize: "0.62rem", padding: "9px 18px", border: `1px solid ${STATUS_COLORS.completed}`, background: selected.status === "completed" ? STATUS_COLORS.completed : "transparent", color: selected.status === "completed" ? "#000" : STATUS_COLORS.completed, cursor: "pointer", fontWeight: selected.status === "completed" ? 700 : 400 }}>✓ Tamamlandı</button>
-                  <button onClick={() => { setRejModal(selected); setRejBy(adminDisplayName) }} style={{ ...mono, fontSize: "0.62rem", padding: "9px 18px", border: "1px solid #ef4444", background: selected.status === "rejected" ? "#ef4444" : "transparent", color: selected.status === "rejected" ? "#fff" : "#ef4444", cursor: "pointer", fontWeight: selected.status === "rejected" ? 700 : 400 }}>Red</button>
+                  <button onClick={() => updateStatus(selected.id, "completed")} style={{ ...mono, fontSize: "0.6rem", padding: "8px 14px", border: `1px solid ${STATUS_COLORS.completed}`, background: selected.status === "completed" ? STATUS_COLORS.completed : "transparent", color: selected.status === "completed" ? "#000" : STATUS_COLORS.completed, cursor: "pointer", fontWeight: selected.status === "completed" ? 700 : 400 }}>✓ Tamamlandı</button>
+                  <button onClick={() => { setRejModal(selected); setRejBy(adminDisplayName) }} style={{ ...mono, fontSize: "0.6rem", padding: "8px 14px", border: "1px solid #ef4444", background: selected.status === "rejected" ? "#ef4444" : "transparent", color: selected.status === "rejected" ? "#fff" : "#ef4444", cursor: "pointer", fontWeight: selected.status === "rejected" ? 700 : 400 }}>Red</button>
                   {adminRole !== "interview" && (
-                    <button onClick={() => deleteApplication(selected.id)} style={{ ...mono, fontSize: "0.62rem", padding: "9px 18px", border: "1px solid var(--color-line)", background: "transparent", color: "var(--color-faint)", cursor: "pointer" }}>Sil</button>
+                    <button onClick={() => deleteApplication(selected.id)} style={{ ...mono, fontSize: "0.6rem", padding: "8px 14px", border: "1px solid var(--color-line)", background: "transparent", color: "var(--color-faint)", cursor: "pointer" }}>Sil</button>
                   )}
                 </div>
               </div>
@@ -1137,7 +1156,7 @@ export default function AdminDashboard() {
               {selected.status === "rejected" && (selected.rejection_reason || selected.rejected_by) && (
                 <div style={{ background: "oklch(0.18 0.06 30 / 0.4)", border: "1px solid #ef4444", padding: "12px 16px", marginTop: 8 }}>
                   <div style={{ ...mono, fontSize: "0.55rem", color: "#ef4444", marginBottom: 6 }}>Red Bilgisi</div>
-                  {selected.rejection_reason && <div style={{ fontFamily: "var(--font-body)", fontSize: "0.88rem", color: "var(--color-muted)", marginBottom: 4 }}><strong style={{ color: "var(--color-faint)", fontFamily: "var(--font-mono)", fontSize: "0.55rem" }}>SEBEP: </strong>{selected.rejection_reason}</div>}
+                  {selected.rejection_reason && <div style={{ fontFamily: "var(--font-body)", fontSize: "0.88rem", color: "var(--color-muted)", marginBottom: 4, wordBreak: "break-word" }}><strong style={{ color: "var(--color-faint)", fontFamily: "var(--font-mono)", fontSize: "0.55rem" }}>SEBEP: </strong>{selected.rejection_reason}</div>}
                   {selected.rejected_by && <div style={{ ...mono, fontSize: "0.6rem", color: "var(--color-faint)" }}>Reddeden: {selected.rejected_by}</div>}
                 </div>
               )}
@@ -1183,15 +1202,15 @@ export default function AdminDashboard() {
           ) : officers.length === 0 ? (
             <div style={{ ...mono, fontSize: "0.65rem", color: "var(--color-faint)", padding: 32, textAlign: "center" }}>Henüz memur eklenmedi</div>
           ) : (
-            <div style={{ border: "1px solid var(--color-line)" }}>
+            <div style={{ border: "1px solid var(--color-line)", overflowX: "auto" }}>
               {/* Table header */}
-              <div style={{ display: "grid", gridTemplateColumns: "50px 90px 1fr 160px 80px 80px 100px 60px", background: "var(--color-bg-3)", borderBottom: "1px solid var(--color-line)", padding: "10px 16px", gap: 8 }}>
+              <div style={{ display: "grid", gridTemplateColumns: "50px 90px 1fr 160px 80px 80px 100px 60px", minWidth: 720, background: "var(--color-bg-3)", borderBottom: "1px solid var(--color-line)", padding: "10px 16px", gap: 8 }}>
                 {["", "Rozet", "İsim", "Discord ID", "Rütbe", "Birim", "Durum", ""].map((h, i) => (
                   <span key={i} style={{ ...mono, fontSize: "0.55rem", color: "var(--color-faint)" }}>{h}</span>
                 ))}
               </div>
               {officers.map((o) => (
-                <div key={o.id} style={{ display: "grid", gridTemplateColumns: "50px 90px 1fr 160px 80px 80px 100px 60px", padding: "12px 16px", borderBottom: "1px solid var(--color-line-soft)", alignItems: "center", gap: 8 }}>
+                <div key={o.id} style={{ display: "grid", gridTemplateColumns: "50px 90px 1fr 160px 80px 80px 100px 60px", minWidth: 720, padding: "12px 16px", borderBottom: "1px solid var(--color-line-soft)", alignItems: "center", gap: 8 }}>
                   {/* Discord avatar */}
                   <div>
                     {o.discord_id ? (
@@ -1310,14 +1329,14 @@ export default function AdminDashboard() {
           {announcements.length === 0 ? (
             <div style={{ ...mono, fontSize: "0.65rem", color: "var(--color-faint)", padding: 32, textAlign: "center" }}>Aktif duyuru yok</div>
           ) : (
-            <div style={{ border: "1px solid var(--color-line)" }}>
-              <div style={{ display: "grid", gridTemplateColumns: "1fr 100px 140px 60px", background: "var(--color-bg-3)", borderBottom: "1px solid var(--color-line)", padding: "10px 16px", gap: 8 }}>
+            <div style={{ border: "1px solid var(--color-line)", overflowX: "auto" }}>
+              <div style={{ display: "grid", gridTemplateColumns: "1fr 100px 140px 60px", minWidth: 460, background: "var(--color-bg-3)", borderBottom: "1px solid var(--color-line)", padding: "10px 16px", gap: 8 }}>
                 {["Mesaj", "Tip", "Tarih", ""].map((h, i) => (
                   <span key={i} style={{ ...mono, fontSize: "0.55rem", color: "var(--color-faint)" }}>{h}</span>
                 ))}
               </div>
               {announcements.map((ann) => (
-                <div key={ann.id} style={{ display: "grid", gridTemplateColumns: "1fr 100px 140px 60px", padding: "12px 16px", borderBottom: "1px solid var(--color-line-soft)", alignItems: "center", gap: 8 }}>
+                <div key={ann.id} style={{ display: "grid", gridTemplateColumns: "1fr 100px 140px 60px", minWidth: 460, padding: "12px 16px", borderBottom: "1px solid var(--color-line-soft)", alignItems: "center", gap: 8 }}>
                   <span style={{ ...mono, fontSize: "0.65rem", color: ann.type === "alert" ? "#ff4444" : "var(--color-accent)", fontWeight: 700 }}>
                     {ann.type === "alert" ? "⚠ " : "● "}{ann.message}
                   </span>
@@ -1652,14 +1671,14 @@ export default function AdminDashboard() {
               Aktif kayan mesaj yok — şerit mesai bilgisini gösteriyor
             </div>
           ) : (
-            <div style={{ border: "1px solid var(--color-line)" }}>
-              <div style={{ display: "grid", gridTemplateColumns: "1fr 100px 140px 60px", background: "var(--color-bg-3)", borderBottom: "1px solid var(--color-line)", padding: "10px 16px", gap: 8 }}>
+            <div style={{ border: "1px solid var(--color-line)", overflowX: "auto" }}>
+              <div style={{ display: "grid", gridTemplateColumns: "1fr 100px 140px 60px", minWidth: 460, background: "var(--color-bg-3)", borderBottom: "1px solid var(--color-line)", padding: "10px 16px", gap: 8 }}>
                 {["Mesaj", "Tip", "Eklenme", ""].map((h, i) => (
                   <span key={i} style={{ ...mono, fontSize: "0.55rem", color: "var(--color-faint)" }}>{h}</span>
                 ))}
               </div>
               {ribbonMessages.map((r) => (
-                <div key={r.id} style={{ display: "grid", gridTemplateColumns: "1fr 100px 140px 60px", padding: "12px 16px", borderBottom: "1px solid var(--color-line-soft)", alignItems: "center", gap: 8 }}>
+                <div key={r.id} style={{ display: "grid", gridTemplateColumns: "1fr 100px 140px 60px", minWidth: 460, padding: "12px 16px", borderBottom: "1px solid var(--color-line-soft)", alignItems: "center", gap: 8 }}>
                   <span style={{ ...mono, fontSize: "0.65rem", color: r.type === "alert" ? "#ff4444" : "var(--color-accent)", fontWeight: 700 }}>
                     {r.type === "alert" ? "⚠ " : "● "}{r.message}
                   </span>
@@ -1755,16 +1774,16 @@ export default function AdminDashboard() {
           ) : archivedApps.length === 0 ? (
             <div style={{ ...mono, fontSize: "0.65rem", color: "var(--color-faint)", padding: 32, textAlign: "center" }}>Arşiv boş</div>
           ) : (
-            <div style={{ border: "1px solid var(--color-line)" }}>
-              <div style={{ display: "grid", gridTemplateColumns: "1fr 140px 120px 140px 220px", background: "var(--color-bg-3)", borderBottom: "1px solid var(--color-line)", padding: "10px 16px", gap: 8 }}>
-                {["Ad Soyad", "Discord", "Durum", "Silinme Tarihi", ""].map((h, i) => (
+            <div style={{ border: "1px solid var(--color-line)", overflowX: "auto" }}>
+              <div style={{ display: "grid", gridTemplateColumns: "1fr 140px 120px 140px 200px", minWidth: 700, background: "var(--color-bg-3)", borderBottom: "1px solid var(--color-line)", padding: "10px 16px", gap: 8 }}>
+                {["Ad Soyad", "Discord", "Durum", "Silinme", ""].map((h, i) => (
                   <span key={i} style={{ ...mono, fontSize: "0.55rem", color: "var(--color-faint)" }}>{h}</span>
                 ))}
               </div>
               {archivedApps.map((a) => {
                 const isOld = (Date.now() - new Date(a.deleted_at).getTime()) > 15 * 24 * 60 * 60 * 1000
                 return (
-                <div key={a.id} style={{ display: "grid", gridTemplateColumns: "1fr 140px 120px 140px 220px", padding: "12px 16px", borderBottom: "1px solid var(--color-line-soft)", alignItems: "center", gap: 8, background: isOld ? "oklch(0.16 0.06 30 / 0.3)" : "transparent" }}>
+                <div key={a.id} style={{ display: "grid", gridTemplateColumns: "1fr 140px 120px 140px 200px", minWidth: 700, padding: "12px 16px", borderBottom: "1px solid var(--color-line-soft)", alignItems: "center", gap: 8, background: isOld ? "oklch(0.16 0.06 30 / 0.3)" : "transparent" }}>
                   <span style={{ fontFamily: "var(--font-body)", fontSize: "0.9rem", color: "var(--color-txt)", fontWeight: 500 }}>
                     {a.full_name}
                     {isOld && <span style={{ ...mono, fontSize: "0.48rem", color: "var(--color-warn)", marginLeft: 8 }}>⚠ 15+ GÜN</span>}
@@ -1887,16 +1906,16 @@ export default function AdminDashboard() {
               {accessRequests.map((r) => (
                 <div key={r.id} style={{ background: "var(--color-bg-2)", border: "1px solid var(--color-line)", padding: "14px 18px" }}>
                   {/* Main row */}
-                  <div style={{ display: "grid", gridTemplateColumns: "40px 1fr 180px 120px auto", alignItems: "center", gap: 12 }}>
+                  <div style={{ display: "flex", flexWrap: "wrap", alignItems: "center", gap: 10 }}>
                     {r.discord_avatar ? (
                       // eslint-disable-next-line @next/next/no-img-element
-                      <img src={r.discord_avatar} alt="" className="rounded-full" style={{ width: 36, height: 36 }} />
+                      <img src={r.discord_avatar} alt="" className="rounded-full" style={{ width: 36, height: 36, flexShrink: 0 }} />
                     ) : (
-                      <div className="rounded-full flex items-center justify-center" style={{ width: 36, height: 36, background: "#5865F2", ...mono, fontSize: "0.6rem", color: "#fff" }}>
+                      <div className="rounded-full flex items-center justify-center" style={{ width: 36, height: 36, background: "#5865F2", ...mono, fontSize: "0.6rem", color: "#fff", flexShrink: 0 }}>
                         {r.discord_name?.[0]?.toUpperCase()}
                       </div>
                     )}
-                    <div>
+                    <div style={{ flex: 1, minWidth: 120 }}>
                       <div style={{ fontFamily: "var(--font-body)", fontSize: "0.9rem", color: "var(--color-txt)", fontWeight: 500 }}>{r.discord_name}</div>
                       <div style={{ ...mono, fontSize: "0.55rem", color: r.status === "pending" ? "var(--color-accent)" : r.status === "approved" ? "var(--color-status-on)" : "var(--color-warn)", marginTop: 2 }}>
                         {r.status === "pending" ? "● Beklemede" : r.status === "approved" ? "● Onaylandı" : "● Reddedildi"}
@@ -1905,7 +1924,7 @@ export default function AdminDashboard() {
                         <div style={{ ...mono, fontSize: "0.5rem", color: "var(--color-status-on)", marginTop: 2 }}>✓ Memura bağlandı</div>
                       )}
                     </div>
-                    <span style={{ ...mono, fontSize: "0.56rem", color: "var(--color-faint)" }}>{r.discord_id}</span>
+                    {!isMobile && <span style={{ ...mono, fontSize: "0.56rem", color: "var(--color-faint)" }}>{r.discord_id}</span>}
                     <span style={{ ...mono, fontSize: "0.56rem", color: "var(--color-faint)" }}>{new Date(r.created_at).toLocaleDateString("tr-TR")}</span>
                     <div className="flex gap-2 flex-wrap">
                       {r.status === "pending" && (

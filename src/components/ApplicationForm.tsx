@@ -237,10 +237,11 @@ export default function ApplicationForm() {
 
             {/* Form */}
             <div
-              className="lg:col-span-4 p-8"
+              className="lg:col-span-4"
               style={{
                 background: "var(--color-bg-2)",
                 border: "1px solid var(--color-line)",
+                padding: "clamp(16px, 4vw, 32px)",
               }}
             >
               <form onSubmit={handleSubmit(onSubmit)}>

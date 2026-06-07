@@ -81,11 +81,11 @@ function OfficerModal({ officer, onClose }: { officer: OfficerRow; onClose: () =
 
   return (
     <div
-      style={{ position: "fixed", inset: 0, background: "oklch(0 0 0 / 0.85)", zIndex: 800, display: "flex", alignItems: "center", justifyContent: "center", padding: 24 }}
+      style={{ position: "fixed", inset: 0, background: "oklch(0 0 0 / 0.85)", zIndex: 800, display: "flex", alignItems: "center", justifyContent: "center", padding: "16px" }}
       onClick={onClose}
     >
       <div
-        style={{ background: "var(--color-bg-2)", border: "1px solid var(--color-line)", width: "100%", maxWidth: 520 }}
+        style={{ background: "var(--color-bg-2)", border: "1px solid var(--color-line)", width: "100%", maxWidth: 520, maxHeight: "90vh", overflowY: "auto" }}
         onClick={(e) => e.stopPropagation()}
       >
         {/* Header bar */}
@@ -201,8 +201,8 @@ export default function PersonnelSection() {
               <input type="text" value={search} onChange={(e) => setSearch(e.target.value)} placeholder="Rozet kodu, isim veya rütbe ara…" style={{ fontFamily: "var(--font-mono)", fontSize: "0.68rem", letterSpacing: "0.1em", padding: "8px 14px", background: "var(--color-bg-2)", border: "1px solid var(--color-line)", color: "var(--color-txt)", outline: "none", flex: "1", minWidth: 200 }} />
             </div>
 
-            <div style={{ border: "1px solid var(--color-line)", overflow: "hidden" }}>
-              <div className="grid" style={{ gridTemplateColumns: "100px 1fr 180px 140px 120px", background: "var(--color-bg-3)", borderBottom: "1px solid var(--color-line)", padding: "10px 16px" }}>
+            <div style={{ border: "1px solid var(--color-line)", overflowX: "auto" }}>
+              <div className="grid" style={{ gridTemplateColumns: "100px 1fr 180px 140px 120px", minWidth: 580, background: "var(--color-bg-3)", borderBottom: "1px solid var(--color-line)", padding: "10px 16px" }}>
                 {["ROZET KOD", "PERSONEL", "RÜTBE", "EMİR KOMUTA", "DURUM"].map((h) => (
                   <span key={h} style={{ fontFamily: "var(--font-mono)", fontSize: "0.58rem", letterSpacing: "0.2em", textTransform: "uppercase", color: "var(--color-faint)" }}>{h}</span>
                 ))}
@@ -214,7 +214,7 @@ export default function PersonnelSection() {
                 </div>
               ) : (
                 filtered.map((o, i) => (
-                  <div key={o.id} className="grid table-row-hover cursor-pointer" onClick={() => setModalOfficer(o)} style={{ gridTemplateColumns: "100px 1fr 180px 140px 120px", padding: "12px 16px", borderBottom: i < filtered.length - 1 ? "1px solid var(--color-line-soft)" : "none", alignItems: "center" }}>
+                  <div key={o.id} className="grid table-row-hover cursor-pointer" onClick={() => setModalOfficer(o)} style={{ gridTemplateColumns: "100px 1fr 180px 140px 120px", minWidth: 580, padding: "12px 16px", borderBottom: i < filtered.length - 1 ? "1px solid var(--color-line-soft)" : "none", alignItems: "center" }}>
                     <span style={{ fontFamily: "var(--font-mono)", fontSize: "0.65rem", letterSpacing: "0.12em", color: "var(--color-accent)" }}>{o.badge_no}</span>
                     <div className="flex items-center gap-3">
                       <OfficerAvatar name={o.name} />
