@@ -1,12 +1,12 @@
 import { cookies } from "next/headers"
 
 export type AdminRole = "founder" | "moderator" | "interview"
-export type AdminPermission = "announce" | "images" | "forum" | "accounts"
+export type AdminPermission = "announce" | "images" | "forum" | "accounts" | "officers"
 
 // Default permissions by role. Founder always has everything.
 const ROLE_DEFAULTS: Record<Exclude<AdminRole, "founder">, Record<AdminPermission, boolean>> = {
-  moderator: { announce: true, images: true, forum: true, accounts: false },
-  interview: { announce: false, images: false, forum: false, accounts: false },
+  moderator: { announce: true, images: true, forum: true, accounts: false, officers: false },
+  interview: { announce: false, images: false, forum: false, accounts: false, officers: false },
 }
 
 interface SessionResult {

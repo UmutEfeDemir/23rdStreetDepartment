@@ -106,6 +106,7 @@ const PERM_OPTIONS = [
   { key: "images", label: "Galeri Yönet" },
   { key: "forum", label: "Forum Oku" },
   { key: "accounts", label: "Hesap Oluştur" },
+  { key: "officers", label: "Personel Yönet" },
 ] as const
 
 function OfficerFormFields({ form, setForm }: { form: OfficerForm; setForm: (f: OfficerForm) => void }) {
@@ -333,6 +334,7 @@ export default function AdminDashboard() {
   const [adminCustomRoleName, setAdminCustomRoleName] = useState<string | null>(null)
   const [adminCustomRoleColor, setAdminCustomRoleColor] = useState<string | null>(null)
   const [adminCustomRoleColorTo, setAdminCustomRoleColorTo] = useState<string | null>(null)
+  const [adminPermissions, setAdminPermissions] = useState<Record<string, boolean>>({})
 
   interface AdminAccount {
     id: string
@@ -389,6 +391,7 @@ export default function AdminDashboard() {
           if (d.customRoleName) setAdminCustomRoleName(d.customRoleName)
           if (d.customRoleColor) setAdminCustomRoleColor(d.customRoleColor)
           if (d.customRoleColorTo) setAdminCustomRoleColorTo(d.customRoleColorTo)
+          if (d.permissions) setAdminPermissions(d.permissions)
           if (d.role === "interview") setTab("applications")
         }
       })
@@ -1052,9 +1055,11 @@ export default function AdminDashboard() {
       {(() => {
         const tabLabel = (t: Tab) => t === "applications" ? `Başvurular (${apps.length})` : t === "officers" ? `Personel (${officers.length})` : t === "access" ? `Erişim (${accessRequests.filter(r => r.status === "pending").length})` : t === "badges" ? `Rozetler (${badgeTypes.length})` : t === "announcements" ? `Duyurular (${announcements.length})` : t === "ribbon" ? `Kayan Mesajlar (${ribbonMessages.length})` : t === "gallery" ? `Galeri (${galleryImages.length})` : t === "archive" ? `Arşiv (${archivedApps.length})` : t === "rules" ? `Kurallar` : t === "accounts" ? `Hesaplar (${accounts.length})` : `Roller (${adminRoles.length})`
         const isVisible = (t: Tab) => {
+          if (adminRole === "founder") return true
           if (adminRole === "interview") return t === "applications"
-          if (adminRole === "moderator") return ["applications", "access", "badges", "announcements", "ribbon", "gallery", "archive", "rules"].includes(t)
-          return true
+          // moderator: base tabs + officer tab if officers permission granted
+          if (t === "officers") return adminPermissions.officers === true
+          return ["applications", "access", "badges", "announcements", "ribbon", "gallery", "archive", "rules"].includes(t)
         }
         const groups: { label: string; tabs: Tab[] }[] = [
           { label: "Mülakat", tabs: ["applications", "access"] },
